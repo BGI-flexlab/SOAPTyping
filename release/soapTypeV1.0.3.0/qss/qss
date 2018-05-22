@@ -1,0 +1,3 @@
+QProgressBar{
+    text-align : center ;
+}
