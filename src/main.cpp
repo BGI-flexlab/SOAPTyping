@@ -1,15 +1,16 @@
-#include "staticdatabase.h"
-#include "realtimedatabase.h"
+#include "database/staticdatabase.h"
+#include "database/realtimedatabase.h"
 #include <QApplication>
-#include "mainwindow.h"
+#include "mainwindow/mainwindow.h"
 #include <QtGui>
 #include <QtCore>
-#include "logindlg.h"
-#include "config.h"
-#include "key_update.h"
-#include "commongsspdatabase.h"
-
+#include "dialog/logindlg.h"
+#include "core/config.h"
+#include "core/key_update.h"
+#include "database/commongsspdatabase.h"
+//改字体
 //Q_IMPORT_PLUGIN(qsqlite)
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc,argv);
@@ -32,8 +33,8 @@ int main(int argc, char *argv[])
     QTextCodec::setCodecForCStrings(QTextCodec::codecForName("GBK"));
     QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
 
-//    QFont f = QApplication::font();
-//    f.setStyleStrategy(QFont::PreferAntialias);
+    //    QFont f = QApplication::font();
+    //    f.setStyleStrategy(QFont::PreferAntialias);
     QFont f("微软雅黑");
     QApplication::setFont(f);
     // QApplication::setStyle("plastique");
@@ -74,23 +75,30 @@ int main(int argc, char *argv[])
     //#if defined( Q_WS_WIN )
     //    app.setStyle( "windowsmodernstyle" );
     //#endif
-    bool log = false;
-    CLoginDlg login;
-    login.setOK(&log);
-    login.exec();
+    bool log = true;//false;
+    //CLoginDlg login;
+    //login.setOK(&log);
+    //login.exec();
     if(log)
     {
         int a=loadStaticDatabase();
         int b=loadGsspDatabase();
         loadCommonGsspDatabase();
-//        createCommonGsspTable();
-//        readCommonGsspTableTxt("D:\\workspace\\Test\\Database\\commonGsspTable.txt");
-//        showCommonGsspDatabase();
+        //        createCommonGsspTable();
+        //        readCommonGsspTableTxt("D:\\workspace\\Test\\Database\\commonGsspTable.txt");
+        //        showCommonGsspDatabase();
         if(a!=0 || b!=0)
         {
             QMessageBox::warning(0, "SoapTyping","Database files are missing!");
         }
-        newStartRealTimeDatabase();
+        /**
+          *修正，闪退问题的另一种解决方案，就是不把数据库清空
+          *不过这样，打开的时候有点慢
+          **/
+        if(!loadRealTimeDatabase()){
+            newStartRealTimeDatabase();
+        }
+
         MainWindow *mainwindow = new MainWindow();
         mainwindow->setDatabaseInfo((a+b)>0 ? false:true);
         QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
@@ -100,6 +108,13 @@ int main(int argc, char *argv[])
         mainwindow->setSizePolicy(sizePolicy);
         mainwindow->resize(1000, 600);
         mainwindow->showMaximized();
+        /**
+          *修正，闪退问题的另一种解决方案，就是不把数据库清空
+          *不过这样，打开的时候有点慢
+          **/
+        mainwindow->onWindowOpen();
+        //showGsspTable();
+        //showCommonGsspDatabase();
         return app.exec();
     }
     if(!key.AllIsRigthNet())

@@ -1,6 +1,6 @@
 #ifndef ALL_BASE_STRUCT_H
 #define ALL_BASE_STRUCT_H
-#include"ab1.h"
+#include"core/ab1.h"
 #include"QString"
 #include<qvector.h>
 #include <QMetaType>
@@ -14,12 +14,12 @@ typedef struct
     int        	pos;        	// position
     //int         gradient;      	// signal strength value
     int         qual;       	// quality value if sequence or else 0
-    int         Matchpos;		// ±È¶Ôµ½Ò»ÖÂĞÔĞòÁĞµÄÎ»ÖÃ£¬-1±íÊ¾Ã»Æ¥ÅäÉÏ
-    // ¼ÓÒ»ÏÂÓëconsensus±È¶ÔµÄÎ»ÖÃ
-    QString         signalA;
-    QString         signalT;
-    QString         signalC;
-    QString         signalG;
+    int         Matchpos;		// æ¯”å¯¹åˆ°ä¸€è‡´æ€§åºåˆ—çš„ä½ç½®ï¼Œ-1è¡¨ç¤ºæ²¡åŒ¹é…ä¸Š
+    // åŠ ä¸€ä¸‹ä¸consensusæ¯”å¯¹çš„ä½ç½®
+    QString         signalA; //æ–°å¢
+    QString         signalT; //æ–°å¢
+    QString         signalC; //æ–°å¢
+    QString         signalG; //æ–°å¢
 } BaseInfor;
 
 typedef struct
@@ -97,18 +97,18 @@ typedef struct
     char type;
     int pos;
 }analyse;
-typedef struct                                                           //	»­Í¼»ù±¾ĞÅÏ¢½á¹¹Ìå
+typedef struct                                                           //	ç”»å›¾åŸºæœ¬ä¿¡æ¯ç»“æ„ä½“
 {
-    QVector <int> leftLimits;						                     //	±£´æÃ¿¸öÎÄ¼ş×óÆÁ±ÎÎ»µã
-    QVector <int> rightLimits;                                           //	±£´æÃ¿¸öÎÄ¼şÓÒÆÁ±ÎÎ»µã
-    QVector <QString> fileNames;                                         //	ÓÃÀ´»­Í¼µÄÎÄ¼şÃûvector
+    QVector <int> leftLimits;						                     //	ä¿å­˜æ¯ä¸ªæ–‡ä»¶å·¦å±è”½ä½ç‚¹
+    QVector <int> rightLimits;                                           //	ä¿å­˜æ¯ä¸ªæ–‡ä»¶å³å±è”½ä½ç‚¹
+    QVector <QString> fileNames;                                         //	ç”¨æ¥ç”»å›¾çš„æ–‡ä»¶åvector
     QVector <MaxValue> filemax;
-    QVector <QVector <BaseInfor> >base;                                  //	Baseo½á¹¹µÄbaseĞÅÏ¢vector
+    QVector <QVector <BaseInfor> >base;                                  //	Baseoç»“æ„çš„baseä¿¡æ¯vector
 
-    QVector <QVector <Each_Base_Signal> >baseG;                                     //	Baseo½á¹¹µÄbaseGĞÅÏ¢vector
-    QVector <QVector <Each_Base_Signal> >baseA;                                     //	Baseo½á¹¹µÄbaseAĞÅÏ¢vector
-    QVector <QVector <Each_Base_Signal> >baseT;                                     //	Baseo½á¹¹µÄbaseTĞÅÏ¢vector
-    QVector <QVector <Each_Base_Signal> >baseC;                                     //	Baseo½á¹¹µÄbaseCĞÅÏ¢vector
+    QVector <QVector <Each_Base_Signal> >baseG;                                     //	Baseoç»“æ„çš„baseGä¿¡æ¯vector
+    QVector <QVector <Each_Base_Signal> >baseA;                                     //	Baseoç»“æ„çš„baseAä¿¡æ¯vector
+    QVector <QVector <Each_Base_Signal> >baseT;                                     //	Baseoç»“æ„çš„baseTä¿¡æ¯vector
+    QVector <QVector <Each_Base_Signal> >baseC;                                     //	Baseoç»“æ„çš„baseCä¿¡æ¯vector
     QVector <QVector <Base_EditInfo>  >edit_info;
 
     QVector <int > excludeleft;
@@ -120,7 +120,7 @@ typedef struct                                                           //	»­Í¼
     QVector <QVector <Peak> >  PeaksG;
     QVector <QVector <Peakinfo> > Peaksinform  ;
     QVector <int > moves;
-    QVector <double> avgsignal;
+    QVector <double> avgsignal; //æ–°å¢
     int currentfile;
 
     //QVector <int > movePos;
@@ -129,22 +129,22 @@ typedef struct                                                           //	»­Í¼
 
 
 
-typedef struct                                                           // ĞŞ¸Ä¼î»ùĞÅÏ¢½á¹¹Ìå
+typedef struct                                                           // ä¿®æ”¹ç¢±åŸºä¿¡æ¯ç»“æ„ä½“
 {
-    QString 	filename;                                                // ĞŞ¸ÄµÄÎÄ¼şÃû
-    int 	    pos;							                         // ĞŞ¸ÄµÄÎ»ÖÃĞÅÏ¢
-    QString 	previousBaseType;                                        // ĞŞ¸ÄÖ®Ç°µÄ¼î»ùĞÍ
-    QString	    currentBaseType;                                         // ĞŞ¸ÄÖ®ºóµÄ¼î»ùĞÍ
+    QString 	filename;                                                // ä¿®æ”¹çš„æ–‡ä»¶å
+    int 	    pos;							                         // ä¿®æ”¹çš„ä½ç½®ä¿¡æ¯
+    QString 	previousBaseType;                                        // ä¿®æ”¹ä¹‹å‰çš„ç¢±åŸºå‹
+    QString	    currentBaseType;                                         // ä¿®æ”¹ä¹‹åçš„ç¢±åŸºå‹
 } ChangeInfor;
 
 
 
 
-typedef struct                                                           // ÆÁ±ÎĞÅÏ¢½á¹¹Ìå
+typedef struct                                                           // å±è”½ä¿¡æ¯ç»“æ„ä½“
 {
-    int         leftBasePos;                                             // ×ó²àÆÁ±ÎÎ»µã
-    int         rightBasePos;                                            // ÓÒ²àÆÁ±ÎÎ»µã
-    QString     filename;                                                // ÆÁ±ÎÎÄ¼şÃû
+    int         leftBasePos;                                             // å·¦ä¾§å±è”½ä½ç‚¹
+    int         rightBasePos;                                            // å³ä¾§å±è”½ä½ç‚¹
+    QString     filename;                                                // å±è”½æ–‡ä»¶å
 } ExcludeData;
 
 typedef struct
@@ -160,12 +160,12 @@ typedef struct
 /*
 struct SignalInfo
 {
-    bool isUndefined;   //ÈôÊÇÃ»ÓĞ¶¨Òå, ÔòÍâÏÔ×ÓÃ»ÓĞ´íÅä, ĞÍ±ğÃ»ÓĞÁĞ±í,
-    bool isCombined;  //Ö»ÓĞĞÍ±ğ±íÓĞĞÅÏ¢, ±È¶Ô±í»¹²»Çå³ş
-    bool isGsspFilter; //ĞÍ±ğ±íÏÔÊ¾²»Ò»Ñù. ±È¶Ô±íÒ²ÊÇ
-    bool isGssp; //ĞÍ±ğ±í..
+    bool isUndefined;   //è‹¥æ˜¯æ²¡æœ‰å®šä¹‰, åˆ™å¤–æ˜¾å­æ²¡æœ‰é”™é…, å‹åˆ«æ²¡æœ‰åˆ—è¡¨,
+    bool isCombined;  //åªæœ‰å‹åˆ«è¡¨æœ‰ä¿¡æ¯, æ¯”å¯¹è¡¨è¿˜ä¸æ¸…æ¥š
+    bool isGsspFilter; //å‹åˆ«è¡¨æ˜¾ç¤ºä¸ä¸€æ ·. æ¯”å¯¹è¡¨ä¹Ÿæ˜¯
+    bool isGssp; //å‹åˆ«è¡¨..
     int exonIndex;
-    QString sampleName; //ÑùÆ·Ãû, Èô»», ÆäËûÄ£¿é¿Ï¶¨»á»»
+    QString sampleName; //æ ·å“å, è‹¥æ¢, å…¶ä»–æ¨¡å—è‚¯å®šä¼šæ¢
     QString rOrF;
     QString geneName;
     QString fileName;
@@ -180,12 +180,12 @@ struct SignalInfo
 
 struct SignalInfo
 {
-    bool isUndefined;   //ÈôÊÇÃ»ÓĞ¶¨Òå, ÔòÍâÏÔ×ÓÃ»ÓĞ´íÅä, ĞÍ±ğÃ»ÓĞÁĞ±í,
-    bool isCombined;  //Ö»ÓĞĞÍ±ğ±íÓĞĞÅÏ¢, ±È¶Ô±í»¹²»Çå³ş
-    bool isGsspFilter; //ĞÍ±ğ±íÏÔÊ¾²»Ò»Ñù. ±È¶Ô±íÒ²ÊÇ
-    bool isGssp; //ĞÍ±ğ±í..
+    bool isUndefined;   //è‹¥æ˜¯æ²¡æœ‰å®šä¹‰, åˆ™å¤–æ˜¾å­æ²¡æœ‰é”™é…, å‹åˆ«æ²¡æœ‰åˆ—è¡¨,
+    bool isCombined;  //åªæœ‰å‹åˆ«è¡¨æœ‰ä¿¡æ¯, æ¯”å¯¹è¡¨è¿˜ä¸æ¸…æ¥š
+    bool isGsspFilter; //å‹åˆ«è¡¨æ˜¾ç¤ºä¸ä¸€æ ·. æ¯”å¯¹è¡¨ä¹Ÿæ˜¯
+    bool isGssp; //å‹åˆ«è¡¨..
     short exonIndex;
-    QString sampleName; //ÑùÆ·Ãû, Èô»», ÆäËûÄ£¿é¿Ï¶¨»á»»
+    QString sampleName; //æ ·å“å, è‹¥æ¢, å…¶ä»–æ¨¡å—è‚¯å®šä¼šæ¢
     QString rOrF;
     QString geneName;
     QString fileName;
@@ -203,7 +203,6 @@ struct SignalInfo
     }
 
 } ;
-
 
 typedef struct
 {
@@ -237,7 +236,7 @@ typedef struct
     int excludeleft;
     int excludeRight ;
     QString editInfo;
-    double avgsignal;
+    double avgsignal; //æ–°å¢
     bool isgssp;
 
 
@@ -278,7 +277,7 @@ struct FileTable
     int excludeLeft;
     int excludeRight;
     QString editInfo;
-    float avgsignal;
+    float avgsignal; //æ–°å¢
     FileTable()
     {
         isExtraFile = 0;
@@ -334,19 +333,19 @@ Q_DECLARE_METATYPE(GsspFileTable);
 
 class ErrorWrite{
 public:
-static void  errorocur(QString error)
- {
-     QFile data("usebyme.aa");
-     if (!data.open(QFile::WriteOnly | QFile::Text|QFile::Append))
-     {
-         QMessageBox :: warning(0 , " ERROR" , "software broken" );
-         return;
-     }
-     QTextStream out(&data);//QDataStream
-     out << error<<"\r\n";
-     data.flush();
-     data.close();
- }
+    static void  errorocur(QString error)
+    {
+        QFile data("usebyme.aa");
+        if (!data.open(QFile::WriteOnly | QFile::Text|QFile::Append))
+        {
+            QMessageBox :: warning(0 , " ERROR" , "software broken" );
+            return;
+        }
+        QTextStream out(&data);//QDataStream
+        out << error<<"\r\n";
+        data.flush();
+        data.close();
+    }
 };
 
 #endif // ALL_BASE_STRUCT_H
