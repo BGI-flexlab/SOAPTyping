@@ -83,9 +83,9 @@ SOAPTyping supplies a set of utilities to assist the analysis. (1) Setting analy
 >**Figure 6** Allele alignment.
 ![alleleAlignment][6]
 
-  [1]: https://github.com/BGI-flexlab/SOAPtyping/tree/master/doc/images/mainUI.png
-  [2]: https://github.com/BGI-flexlab/SOAPtyping/tree/master/doc/images/propositionalWorkflow.png
-  [3]: https://github.com/BGI-flexlab/SOAPtyping/tree/master/doc/images/openFile.png
-  [4]: https://github.com/BGI-flexlab/SOAPtyping/tree/master/doc/images/databaseUpdate.png
-  [5]: https://github.com/BGI-flexlab/SOAPtyping/tree/master/doc/images/gsspUpdate.png
-  [6]: https://github.com/BGI-flexlab/SOAPtyping/tree/master/doc/images/alleleAlignment.png
+  [1]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/mainUI.png
+  [2]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/propositionalWorkflow.png
+  [3]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/openFile.png
+  [4]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/databaseUpdate.png
+  [5]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/gsspUpdate.png
+  [6]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/alleleAlignment.png
