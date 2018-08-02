@@ -29,6 +29,26 @@ The outline of the HLA typing workflow using SOAPTyping can be described as foll
 ------
 
 ## Installation
+SOAPTyping is developed by C++ and QT 4.8.7. As the version of QT is a litte old, we are trying to update the QT version in future.
+
+### Prepare the environment
+The dependencies you should prepare is QT, QT creator and C++ complier. You can follow the instructions on QT website: https://www.qt.io/
+The recommended version of QT and QT creator you should download is :
+>qt-opensource-windows: http://download.qt.io/archive/qt/4.8/4.8.7/  
+>qt-creator:http://download.qt.io/official_releases/qtcreator/4.2/4.2.2/
+
+**notes:**
+1.  Don't forget to add the executes and librarys to your compute environment.
+2.  For windows, we recommend install QT with mingw, which had been tested by ourself.
+
+
+### Complie from source code
+
+1.  Download the release for github
+2.  Open the project with QT creator
+3.  Configure the C++ complier, debugger and QT complier in build and run section of QT creator.
+4.  Build the project.
+5.  Put the dependencies that you download from github into the execute program directory. Then you can run SoapTyping.
 
 ----
 
