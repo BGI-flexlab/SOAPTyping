@@ -41,7 +41,7 @@ HEADERS += \
     dialog/exontrimdlg.h \
     dialog/updatedatabasedlg.h \
     database/commongsspdatabase.h \
-    core/soapletter.h
+    mainwindow/soapletter.h
 SOURCES += \
     main.cpp \
     database/staticdatabase.cpp \
@@ -84,7 +84,7 @@ SOURCES += \
     dialog/exontrimdlg.cpp \
     dialog/updatedatabasedlg.cpp \
     database/commongsspdatabase.cpp \
-    core/soapletter.cpp
+    mainwindow/soapletter.cpp
 FORMS += \
     mainwindow/basealigntablewidget.ui
 QT += sql

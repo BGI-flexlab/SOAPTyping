@@ -12,7 +12,7 @@
 #include "QFile"
 #include "QPoint"
 #include "QFrame"
-#include "core/soapletter.h" //新增
+#include "mainwindow/soapletter.h" //新增
 //改
 #define Ccolor QColor( 0,0,255)
 #define Gcolor QColor( 0,0,0)
