@@ -1,149 +1,162 @@
 #include "loadfiledlg.h"
-#include "savefiledlg.h"
-#include <QtGui>
-const QString resultPath = "Result";
+#include "ui_loadfiledlg.h"
+#include <QDir>
+#include <QDateTime>
+#include <QTextStream>
+#include "Core/fileTablebase.h"
+#include "DataBase/soaptypingdb.h"
+#include "Core/core.h"
 
-LoadFileDlg::LoadFileDlg(bool *isDone, QWidget *parent)
-    : QDialog(parent)
+const QString RESULTPATH = "Result";
+
+LoadFileDlg::LoadFileDlg(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::LoadFileDlg)
 {
-    isDone_ = isDone;
-    this->setWindowTitle("Load Samples");
-    QVBoxLayout *vBoxLayout = new QVBoxLayout(this);
-    QHBoxLayout *hBoxLayout1 = new QHBoxLayout;
-    QHBoxLayout *hBoxLayout2 = new QHBoxLayout;
-    QHBoxLayout *hBoxLayout3 = new QHBoxLayout;
-    QLabel *findByDataLabel = new QLabel;
-    findByDataLabel->setText("Search By Date: ");
-    QLabel *findByNameLabel = new QLabel;
-    findByNameLabel->setText("Search By Name: ");
-    QSpacerItem *spacer1 = new QSpacerItem(10, 10, QSizePolicy::Expanding, QSizePolicy::Minimum);
-    QSpacerItem *spacer2 = new QSpacerItem(10, 10, QSizePolicy::Expanding, QSizePolicy::Minimum);
-    QSpacerItem *spacer3 = new QSpacerItem(10, 10, QSizePolicy::Expanding, QSizePolicy::Minimum);
+    ui->setupUi(this);
+    InitUI();
+    ConnectSignalandSlot();
 
-    setLoadFileDlgDefault();
-
-    hBoxLayout1->addWidget(findByDataLabel);
-    hBoxLayout1->addWidget(dateComboBox);
-    hBoxLayout1->addSpacerItem(spacer1);
-    hBoxLayout1->addWidget(findByNameLabel);
-    hBoxLayout1->addWidget(nameLineEdit);
-    hBoxLayout1->addSpacerItem(spacer2);
-
-    hBoxLayout2->addWidget(checkAllBox);
-    hBoxLayout2->addSpacerItem(spacer3);
-    hBoxLayout2->addWidget(loadButton);
-    hBoxLayout2->addWidget(exitButton);
-
-    hBoxLayout3->addWidget(labelButton);
-    hBoxLayout3->addWidget(progressBar);
-
-    vBoxLayout->addWidget(table);
-    vBoxLayout->addLayout(hBoxLayout1);
-    vBoxLayout->addLayout(hBoxLayout2);
-    vBoxLayout->addLayout(hBoxLayout3);
-    this->resize(900, 600);
-    connect(loadButton, SIGNAL(clicked()), this, SLOT(slotClickLoadButton()));
-    connect(exitButton, SIGNAL(clicked()), this, SLOT(close()));
-    connect(checkAllBox, SIGNAL(clicked(bool)), this, SLOT(slotClickCheckAllBox(bool)));
-    connect(dateComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slotdateComboBoxChagned(int)));
-    connect(nameLineEdit, SIGNAL(textChanged(QString)), this, SLOT(slotLineEditChanged(QString)));
-
-    daysNum = 0;
+    m_idaysNum = 0;
     getLoadInfo();
     getOkIndex();
-    setTableDate();
+    SetTableData();
 }
-void LoadFileDlg::setLoadFileDlgDefault()
-{
 
-    dateComboBox = new QComboBox(this);
+LoadFileDlg::~LoadFileDlg()
+{
+    delete ui;
+}
+
+void LoadFileDlg::InitUI()
+{
     QStringList li;
     li<<"Today"<<"Last 1 Days"<<"Last 3 Days"<<"Last 7 Days"<<"Last 30 Days"<<"All";
-    dateComboBox->addItems(li);
-    dateComboBox->setEditable(false);
-    nameLineEdit = new QLineEdit(this);
+    ui->comboBox->addItems(li);
 
-    checkAllBox = new QCheckBox("check all",this);
-    checkAllBox->setChecked(true);
-
-    loadButton = new QPushButton("load",this);
-    exitButton = new QPushButton("exit", this);
-
-    table = new QTableWidget(this);
-    table->verticalHeader()->setVisible(false);
-    table->setColumnCount(5);
-    table->setColumnWidth(0,200);
-    table->setColumnWidth(1,150);
-    table->setColumnWidth(2,150);
-    table->setColumnWidth(3,200);
-    table->setColumnWidth(5,200);
+    ui->tableWidget->verticalHeader()->setVisible(false);
+    ui->tableWidget->setColumnCount(5);
+    ui->tableWidget->setColumnWidth(0,200);
+    ui->tableWidget->setColumnWidth(1,150);
+    ui->tableWidget->setColumnWidth(2,150);
+    ui->tableWidget->setColumnWidth(3,200);
+    ui->tableWidget->setColumnWidth(5,200);
     QStringList header;
     header <<"Sample Name"<<"Analysis Type"<<"Mark Type"<<"Created Time"<<"Last Modifed Time";
-    table->setHorizontalHeaderLabels(header);
-    table->horizontalHeader()->setStretchLastSection(true);
-    table->resize(800,500);
-
-    labelButton = new QPushButton("Ready:", this);
-    progressBar = new QProgressBar(this);
+    ui->tableWidget->setHorizontalHeaderLabels(header);
+    ui->tableWidget->horizontalHeader()->setStretchLastSection(true);
 }
 
-void LoadFileDlg::setTableDate()
+void LoadFileDlg::ConnectSignalandSlot()
 {
-    table->clear();
-    QStringList header;
-    header <<"Sample Name"<<"Analysis Type"<<"Mark Type"<<"Created Time"<<"Last Modifed Time";
-    table->setHorizontalHeaderLabels(header);
-    if(okFileIndex.size()<=0)
+    connect(ui->btnLoad, &QPushButton::clicked, this, &LoadFileDlg::slotClickLoadButton);
+    connect(ui->btnExit, &QPushButton::clicked, this, &LoadFileDlg::close);
+    connect(ui->checkBox, &QCheckBox::clicked, this, &LoadFileDlg::slotClickCheckAllBox);
+    connect(ui->comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &LoadFileDlg::slotdateComboBoxChagned);
+    connect(ui->lineEdit, &QLineEdit::textChanged, this, &LoadFileDlg::slotLineEditChanged);
+}
+
+void LoadFileDlg::slotClickLoadButton()
+{
+    if(m_vec_index.size()==0)
+    {
+        close();
         return;
-
-    int size = okFileIndex.size();
-    table->setRowCount(size);
-    //QTableWidgetItem *itemN = new QTableWidgetItem[size * 5];
-    for(int i=0; i<size;i++)
-    {
-        QTableWidgetItem *itemN = new QTableWidgetItem;
-        const LoadInfo &loadInfo = loadInfos.at(okFileIndex.at(i));
-        itemN->setCheckState(checkAllBox->checkState());
-        itemN->setIcon(getIcon(loadInfo.analysisType, loadInfo.markType));
-        itemN->setText(loadInfo.sampleName);
-        table->setItem(i, 0, itemN);
-        itemN = new QTableWidgetItem;
-        itemN->setText(getAnalysisType(loadInfo.analysisType));
-        table->setItem(i, 1, itemN);
-
-        itemN = new QTableWidgetItem;
-        itemN->setText(getMarkType(loadInfo.markType));
-        table->setItem(i, 2, itemN);
-
-        itemN = new QTableWidgetItem;
-        itemN->setText(loadInfo.createdTime);
-        table->setItem(i, 3, itemN);
-
-        itemN = new QTableWidgetItem;
-        itemN->setText(loadInfo.modifiedTime);
-        table->setItem(i, 4, itemN);
     }
+
+    ui->checkBox->setEnabled(false);
+    ui->btnExit->setEnabled(false);
+    ui->comboBox->setEditable(false);
+    ui->lineEdit->setEnabled(false);
+
+
+    QVector<QString> samplePaths;
+    QVector<QString> filePaths;
+    QVector<QString> gsspFilePaths;
+
+    int size = m_vec_index.size();
+    for(int i=0; i<size; i++)
+    {
+        if(ui->tableWidget->item(i, 0)->checkState()==Qt::Checked)
+        {
+            readListFile(m_vec_LoadInfo.at(m_vec_index.at(i)).listFile, samplePaths, filePaths, gsspFilePaths);
+        }
+    }
+
+    int fileSize = samplePaths.size()+filePaths.size()+gsspFilePaths.size();
+    int value=0;
+
+    ui->btnStatus->setText("Waiting..");
+    ui->progressBar->setRange(0, fileSize);
+    for(int i=0; i<samplePaths.size();i++)
+    {
+        loadSample(samplePaths.at(i));
+        ui->progressBar->setValue(++value);
+    }
+
+    for(int i=0; i<filePaths.size(); i++)
+    {
+        loadFile(filePaths.at(i));
+        ui->progressBar->setValue(++value);
+    }
+
+    for(int i=0; i<gsspFilePaths.size(); i++)
+    {
+        loadGssp(gsspFilePaths.at(i));
+        ui->progressBar->setValue(++value);
+    }
+    close();
 }
 
-void LoadFileDlg::getOkIndex()
+void LoadFileDlg::slotClickCheckAllBox(bool status)
 {
-    okFileIndex.clear();
-    for(int i=0; i<loadInfos.size();i++)
+    for(int i=0; i<ui->tableWidget->rowCount(); i++)
     {
-        if(loadInfos.at(i).dateToNow > daysNum)
-            continue;
-        if(!name.isEmpty() && !loadInfos.at(i).sampleName.contains(name))
-            continue;
-        okFileIndex.push_back(i);
+        Qt::CheckState state = status ? Qt::Checked: Qt::Unchecked;
+        ui->tableWidget->item(i, 0)->setCheckState(state);
     }
 }
 
+void LoadFileDlg::slotdateComboBoxChagned(int index)
+{
+    switch(index)
+    {
+    case 0:
+        m_idaysNum=0;
+        break;
+    case 1:
+        m_idaysNum=1;
+        break;
+    case 2:
+        m_idaysNum=3;
+        break;
+    case 3:
+        m_idaysNum=7;
+        break;
+    case 4:
+        m_idaysNum=30;
+        break;
+    default:
+        m_idaysNum=300000;
+        break;
+    }
+
+    getOkIndex();
+    SetTableData();
+}
+
+void LoadFileDlg::slotLineEditChanged(const QString & name)
+{
+    m_str_SearchName = name;
+    getOkIndex();
+    SetTableData();
+}
 
 void LoadFileDlg::getLoadInfo()
 {
-    loadInfos.clear();
+    m_vec_LoadInfo.clear();
     QDir dir;
-    dir.setPath(resultPath);
+    dir.setPath(RESULTPATH);
     if(!dir.exists())
     {
         return;
@@ -157,8 +170,9 @@ void LoadFileDlg::getLoadInfo()
         LoadInfo loadInfo;
 
         loadInfo.sampleName = list.at(i).baseName();
-        loadInfo.createdTime = list.at(i).created().toString();
-        QString fileName = QString("%1%2%3%4list.txt").arg(resultPath).arg(QDir::separator()).arg(loadInfo.sampleName).arg(QDir::separator());
+        loadInfo.createdTime = list.at(i).birthTime().toString();
+        QString fileName = QString("%1%2%3%4list.txt").arg(RESULTPATH).arg(QDir::separator()).
+                arg(loadInfo.sampleName).arg(QDir::separator());
         QFileInfo fileInfo(fileName);
         if(!fileInfo.exists())
             continue;
@@ -171,130 +185,59 @@ void LoadFileDlg::getLoadInfo()
         loadInfo.analysisType=stream.readLine().split(":").at(1).toInt();
         loadInfo.markType=stream.readLine().split(":").at(1).toInt();
         file.close();
-        loadInfos.push_back(loadInfo);
+        m_vec_LoadInfo.push_back(loadInfo);
     }
 }
 
-void LoadFileDlg::slotClickCheckAllBox(bool check)
+void LoadFileDlg::getOkIndex()
 {
-    if(check)
+    m_vec_index.clear();
+    for(int i=0; i<m_vec_LoadInfo.size();i++)
     {
-        for(int i=0; i<table->rowCount(); i++)
-        {
-            table->item(i, 0)->setCheckState(Qt::Checked);
-        }
-    }
-    else
-    {
-        for(int i=0; i<table->rowCount(); i++)
-        {
-            table->item(i, 0)->setCheckState(Qt::Unchecked);
-        }
+        if(m_vec_LoadInfo.at(i).dateToNow > m_idaysNum)
+            continue;
+        if(!m_str_SearchName.isEmpty() && !m_vec_LoadInfo.at(i).sampleName.contains(m_str_SearchName))
+            continue;
+        m_vec_index.push_back(i);
     }
 }
 
-void LoadFileDlg::slotClickLoadButton()
+void LoadFileDlg::SetTableData()
 {
-    if(okFileIndex.size()==0)
-    {
-        close();
+    if(m_vec_index.size()<=0)
         return;
-    }
 
-    int size = okFileIndex.size();
-    for(int i=0; i<size; i++)
+    int size = m_vec_index.size();
+    ui->tableWidget->setRowCount(size);
+
+    for(int i=0; i<size;i++)
     {
-        if(table->item(i, 0)->checkState()==Qt::Checked)
-        {
-            *isDone_ = true;
-            break;
-        }
+        QTableWidgetItem *itemN = new QTableWidgetItem;
+        const LoadInfo &loadInfo = m_vec_LoadInfo.at(m_vec_index.at(i));
+        itemN->setCheckState(ui->checkBox->checkState());
+        itemN->setIcon(Core::GetInstance()->getIcon(loadInfo.analysisType, loadInfo.markType));
+        itemN->setText(loadInfo.sampleName);
+        ui->tableWidget->setItem(i, 0, itemN);
+        itemN = new QTableWidgetItem;
+        itemN->setText(Core::GetInstance()->getAnalysisType(loadInfo.analysisType));
+        ui->tableWidget->setItem(i, 1, itemN);
+
+        itemN = new QTableWidgetItem;
+        itemN->setText(Core::GetInstance()->getMarkType(loadInfo.markType));
+        ui->tableWidget->setItem(i, 2, itemN);
+
+        itemN = new QTableWidgetItem;
+        itemN->setText(loadInfo.createdTime);
+        ui->tableWidget->setItem(i, 3, itemN);
+
+        itemN = new QTableWidgetItem;
+        itemN->setText(loadInfo.modifiedTime);
+        ui->tableWidget->setItem(i, 4, itemN);
     }
-    if(!*isDone_)
-    {
-        QMessageBox::warning(this, tr("Soap Typing"), tr("Please choose sample to load!"));
-        return;
-    }
-
-    checkAllBox->setEnabled(false);
-    exitButton->setEnabled(false);
-    dateComboBox->setEditable(false);
-    nameLineEdit->setEnabled(false);
-
-
-    QVector<QString> samplePaths;
-    QVector<QString> filePaths;
-    QVector<QString> gsspFilePaths;
-
-    for(int i=0; i<size; i++)
-    {
-        if(table->item(i, 0)->checkState()==Qt::Checked)
-        {
-            readListFile(loadInfos.at(okFileIndex.at(i)).listFile, samplePaths, filePaths, gsspFilePaths);
-        }
-    }
-
-    int fileSize = samplePaths.size()+filePaths.size()+gsspFilePaths.size();
-    int value=0;
-
-    labelButton->setText("Waiting..");
-    progressBar->setRange(0, fileSize);
-    for(int i=0; i<samplePaths.size();i++)
-    {
-        loadSample(samplePaths.at(i));
-        progressBar->setValue(++value);
-    }
-
-    for(int i=0; i<filePaths.size(); i++)
-    {
-        loadFile(filePaths.at(i));
-        progressBar->setValue(++value);
-    }
-
-    for(int i=0; i<gsspFilePaths.size(); i++)
-    {
-        loadGssp(gsspFilePaths.at(i));
-        progressBar->setValue(++value);
-    }
-    close();
 }
 
-
-void LoadFileDlg::slotdateComboBoxChagned(int i)
-{
-    switch(i)
-    {
-    case 0:
-        daysNum=0;
-        break;
-    case 1:
-        daysNum=1;
-        break;
-    case 2:
-        daysNum=3;
-        break;
-    case 3:
-        daysNum=7;
-        break;
-    case 4:
-        daysNum=30;
-        break;
-    default:
-        daysNum=300000;
-        break;
-    }
-    getOkIndex();
-    setTableDate();
-}
-
-void LoadFileDlg::slotLineEditChanged(QString name0)
-{
-    name = name0;
-    getOkIndex();
-    setTableDate();
-}
-
-void readListFile(const QString &listFilePath, QVector<QString> &samplePaths, QVector<QString> &filePaths, QVector<QString> &gsspFilePaths)
+void LoadFileDlg::readListFile(const QString &listFilePath, QVector<QString> &samplePaths,
+                  QVector<QString> &filePaths, QVector<QString> &gsspFilePaths)
 {
     QFile file(listFilePath);
     file.open(QFile::ReadOnly);
@@ -316,4 +259,140 @@ void readListFile(const QString &listFilePath, QVector<QString> &samplePaths, QV
         }
     }
     file.close();
+}
+
+void LoadFileDlg::loadSample(const QString &samplePath)
+{
+    SampleTable sampletable;
+
+    QFile file(samplePath);
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        return;
+    }
+
+    QTextStream stream(&file);
+
+    sampletable.setSampleName(stream.readLine());
+    sampletable.setGeneName(stream.readLine());
+    sampletable.setFileType(stream.readLine().toInt());
+    sampletable.setMarkType(stream.readLine().toInt());
+    sampletable.setAnalysisType(stream.readLine().toInt());
+    sampletable.setMinExonIndex(stream.readLine().toInt());
+    sampletable.setMaxExonIndex(stream.readLine().toInt());
+    sampletable.setExonStartPos(stream.readLine().toInt());
+    sampletable.setExonEndPos(stream.readLine().toInt());
+    sampletable.setConsensusSequence(stream.readLine());
+    sampletable.setForwardSequence(stream.readLine());
+    sampletable.setReverseSequence(stream.readLine());
+    sampletable.setPatternSequence(stream.readLine());
+    sampletable.setMismatchBetweenPC(stream.readLine());
+    sampletable.setMismatchBetweenFR(stream.readLine());
+    sampletable.setMmismatchBetweenFR(stream.readLine());
+    sampletable.setEditPostion(stream.readLine());
+    sampletable.setTypeResult(stream.readLine());
+    sampletable.setGsspInfo(stream.readLine());
+    sampletable.setShieldAllele(stream.readLine());
+    sampletable.setSetResult(stream.readLine());
+    sampletable.setSetNote(stream.readLine());
+    sampletable.setSetGSSP(stream.readLine());
+    sampletable.setCombinedResult(stream.readLine());
+
+    SoapTypingDB::GetInstance()->insertOneSampleTable(sampletable);
+    return;
+}
+
+void LoadFileDlg::loadFile(const QString &filePath)
+{
+    QFile file(filePath);
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        return;
+    }
+    QTextStream stream(&file);
+
+    Ab1FileTableBase filetable;
+    filetable.setFileName(stream.readLine());
+    filetable.setSampleName(stream.readLine());
+    filetable.setFilePath(stream.readLine());
+    filetable.setExtraFile(stream.readLine().toInt());
+    filetable.setGeneName(stream.readLine());
+    filetable.setExonIndex(stream.readLine().toInt());
+    filetable.setROrF(stream.readLine().at(0));
+    filetable.setExonStartPos(stream.readLine().toInt());
+    filetable.setExonEndPos(stream.readLine().toInt());
+    filetable.setUsefulSequence(stream.readLine());
+    filetable.setBaseSequence(stream.readLine().toLatin1());
+    filetable.setBasePostion(stream.readLine());
+    filetable.setBaseQuality(stream.readLine());
+    filetable.setBaseNumber(stream.readLine().toInt());
+    filetable.setBaseASignal(stream.readLine());
+    filetable.setBaseTSignal(stream.readLine());
+    filetable.setBaseGSignal(stream.readLine());
+    filetable.setBaseCSignal(stream.readLine());
+    filetable.setSignalNumber(stream.readLine().toInt());
+    filetable.setMaxSignal(stream.readLine().toInt());
+    filetable.setMaxQuality(stream.readLine().toInt());
+    filetable.setAverageBaseWidth(stream.readLine().toFloat());
+    filetable.setIsGood(stream.readLine().toInt());
+    filetable.setAlignResult(stream.readLine().toInt());
+    filetable.setAlignStartPos(stream.readLine().toInt());
+    filetable.setAlignEndPos(stream.readLine().toInt());
+    filetable.setAlignInfo(stream.readLine());
+    filetable.setExcludeLeft(stream.readLine().toInt());
+    filetable.setExcludeRight(stream.readLine().toInt());
+    filetable.setEditInfo(stream.readLine());
+
+    SoapTypingDB::GetInstance()->InsertOneFileTable(filetable);
+    file.close();
+    return;
+}
+
+void LoadFileDlg::loadGssp(const QString &gsspFilePath)
+{
+    QFile file(gsspFilePath);
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        return;
+    }
+
+    QTextStream stream(&file);
+
+    Ab1FileTableBase filetable;
+    filetable.setFileName(stream.readLine());
+    filetable.setSampleName(stream.readLine());
+    filetable.setFilePath(stream.readLine());
+    filetable.setGsspName(stream.readLine());
+    filetable.setGeneName(stream.readLine());
+    filetable.setExonIndex(stream.readLine().toInt());
+    filetable.setROrF(stream.readLine().at(0));
+    filetable.setExonStartPos(stream.readLine().toInt());
+    filetable.setExonEndPos(stream.readLine().toInt());
+    filetable.setUsefulSequence(stream.readLine());
+    filetable.setBaseSequence(stream.readLine().toLatin1());
+    filetable.setBasePostion(stream.readLine());
+    filetable.setBaseQuality(stream.readLine());
+    filetable.setBaseNumber(stream.readLine().toInt());
+    filetable.setBaseASignal(stream.readLine());
+    filetable.setBaseTSignal(stream.readLine());
+    filetable.setBaseGSignal(stream.readLine());
+    filetable.setBaseCSignal(stream.readLine());
+    filetable.setSignalNumber(stream.readLine().toInt());
+    filetable.setMaxSignal(stream.readLine().toInt());
+    filetable.setMaxQuality(stream.readLine().toInt());
+    filetable.setAverageBaseWidth(stream.readLine().toFloat());
+    filetable.setIsGood(stream.readLine().toInt());
+    filetable.setAlignResult(stream.readLine().toInt());
+    filetable.setAlignStartPos(stream.readLine().toInt());
+    filetable.setAlignEndPos(stream.readLine().toInt());
+    filetable.setAlignInfo(stream.readLine());
+    filetable.setExcludeLeft(stream.readLine().toInt());
+    filetable.setExcludeRight(stream.readLine().toInt());
+    filetable.setEditInfo(stream.readLine());
+    filetable.setTypeResult(stream.readLine());
+    filetable.setFilterResult(stream.readLine());
+
+    SoapTypingDB::GetInstance()->insertOneGsspFileTable(filetable);
+    file.close();
+    return;
 }

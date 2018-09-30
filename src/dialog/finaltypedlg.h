@@ -1,31 +1,35 @@
 #ifndef FINALTYPEDLG_H
 #define FINALTYPEDLG_H
-#include <QtCore>
-#include <QtGui>
-class FinalTypeDlg:public QDialog
+
+#include <QDialog>
+
+namespace Ui {
+class FinalTypeDlg;
+}
+
+class FinalTypeDlg : public QDialog
 {
     Q_OBJECT
+
 public:
-    FinalTypeDlg(QWidget *parent=0);
+    explicit FinalTypeDlg(QWidget *parent = nullptr);
+    ~FinalTypeDlg();
     void setSampleName(const QString &sampleName);
     void setAlleleResult(const QVector<QStringList> &result);
+
 private:
-    void setFinalTypeDlgDefault();
+    void InitUI();
+    void ConnectSignalandSlot();
 private slots:
     void slotClickSetButton();
     void slotRowChanged();
     void slotClickSaveButton();
+
 private:
-    QLineEdit *sampleNameLine_;
-    QLineEdit *allele1Line_;
-    QLineEdit *allele2Line_;
-    QTableWidget *table_;
-    QPushButton *saveButton_;
-    QPushButton *exitButton_;
-    QPushButton *setButton_;
-    QString alleleName1_;
-    QString alleleName2_;
-    QString sampleName_;
+    Ui::FinalTypeDlg *ui;
+    QString m_str_SampleName;
+    QString m_str_allele1;
+    QString m_str_allele2;
 };
 
 #endif // FINALTYPEDLG_H

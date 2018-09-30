@@ -1,569 +1,383 @@
 #include "mainwindow.h"
-#include "statusbarwidget.h"
-#include "dialog/savefiledlg.h"
-#include "dialog/loadfiledlg.h"
-#include "dialog/deletefiledlg.h"
-#include "dialog/reportdlg.h"
-#include "dialog/setdlg.h"
-#include "dialog/exontrimdlg.h"
-#include "dialog/updatedatabasedlg.h"
-//#include "windowsmodernstyle.h"
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+#include "ui_mainwindow.h"
+#include <QtCharts/QChartView>
+#include <QtCharts/QSplineSeries>
+#include "Dialog/openfiledialog.h"
+#include <QSplitter>
+#include "sampletreewidget.h"
+#include "matchlistwidget.h"
+#include <QScrollArea>
+#include "multipeakwidget.h"
+#include "exonnavigatorwidget.h"
+#include "basealigntablewidget.h"
+#include <QtDebug>
+#include <QScrollBar>
+#include <QTime>
+#include "Dialog/savefiledlg.h"
+#include "Dialog/loadfiledlg.h"
+#include "Dialog/deletefiledlg.h"
+#include "Dialog/reportdlg.h"
+#include "DataBase/soaptypingdb.h"
+#include <QMessageBox>
+#include "ThreadTask/analysissamplethreadtask.h"
+#include "Dialog/allelepairdlg.h"
+#include "Dialog/setdlg.h"
+#include "Dialog/exontimdlg.h"
+#include "Dialog/alignmentdlg.h"
+#include <QFileInfo>
+#include <QDesktopServices>
+#include "log/log.h"
+
+QT_CHARTS_USE_NAMESPACE
+
+const QString VERSION("1.0.6.0");
+
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
 {
-    setWindowTitle(tr("SoapTyping"));
-    setWindowIcon(QIcon(":/images/logo.png"));
-    //    setStyleSheet("QToolBar{background-color:#cedcc5;border: 0px solid grey;height:140px};QToolBar::QAction:hover{color:blue};");
-    has_database = false;
-    createDefault();
-    this->setObjectName("mainwindow"); //新增
-    //setIconSize();
+    ui->setupUi(this);
+    InitUI();
+    ConnectSignalandSlot();
+    SetStatusbar();
+}
 
-    sampleTree = new SampleTreeWidget(this);
-    matchListTable = new MatchListWidget(this);
-    exonNavigator = new ExonNavigator(this);
-    baseAlignTable = new BaseAlignTable(this);
-    main_mscillogram = new Main_Oscillogram();
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
 
-    exonNavigator->setMinimumHeight(80); //新增
-    //    exonNavigator->resize(100,100); //改，删
-    baseAlignTable->resize(100,100);
-    sampleTree->setObjectName("sampleTree"); //新增
-    baseAlignTable->setObjectName("baseAlignTable");//新增
-    matchListTable->setObjectName("matchListTable"); //新增
-    align=new AlignmentDialog();
-    QSplitter *leftSplitter = new QSplitter(Qt::Vertical, this);
-    QSplitter *rightSplitter = new QSplitter(Qt::Vertical, this);
-    QSplitter *mainSplitter = new QSplitter(Qt::Horizontal, this);
+void MainWindow::InitUI()
+{
+    QSplitter *leftSplitter = new QSplitter(Qt::Vertical);
+    QSplitter *rightSplitter = new QSplitter(Qt::Vertical);
+    QSplitter *mainSplitter = new QSplitter(Qt::Horizontal);
 
-    leftSplitter->addWidget(exonNavigator);
-    leftSplitter->addWidget(baseAlignTable);
+    m_pExonNavigatorWidget = new ExonNavigatorWidget;
+    m_pExonNavigatorWidget->setMinimumHeight(100);
+    m_pExonNavigatorWidget->setMaximumHeight(100);
 
-    leftSplitter->setStretchFactor(0,1);
-    leftSplitter->setStretchFactor(1,15);//9
-    leftSplitter->addWidget(main_mscillogram);
-    leftSplitter->setStretchFactor(2,60);//70
+    m_pBaseAlignTableWidget = new BaseAlignTableWidget;
+    m_pBaseAlignTableWidget->setMinimumHeight(220);
 
-    rightSplitter->addWidget(sampleTree);
-    rightSplitter->addWidget(matchListTable);
-    rightSplitter->setStretchFactor(0,59); //改(0,1)
-    rightSplitter->setStretchFactor(1,100); //改(1,2)
+    m_pPeak_area = new QScrollArea;
+    m_pMultiPeakWidget = new MultiPeakWidget();
+    m_pPeak_area->setWidget(m_pMultiPeakWidget);
+    m_pMultiPeakWidget->setMinimumHeight(400);
+
+    m_pSampleTreeWidget = new SampleTreeWidget;
+    m_pSampleTreeWidget->setMinimumSize(400,320);
+
+    m_pMatchListWidget = new MatchListWidget;
+
+    leftSplitter->addWidget(m_pExonNavigatorWidget);
+    leftSplitter->addWidget(m_pBaseAlignTableWidget);
+    leftSplitter->addWidget(m_pPeak_area);
+    leftSplitter->setStretchFactor(0,10);
+    leftSplitter->setStretchFactor(1,22);
+    leftSplitter->setStretchFactor(2,68);
+
+    rightSplitter->addWidget(m_pSampleTreeWidget);
+    rightSplitter->addWidget(m_pMatchListWidget);
+    rightSplitter->setStretchFactor(0,50);
+    rightSplitter->setStretchFactor(1,50);
 
     mainSplitter->addWidget(leftSplitter);
     mainSplitter->addWidget(rightSplitter);
     mainSplitter->setStretchFactor(0,75);
     mainSplitter->setStretchFactor(1,25);
 
-    QWidget *centralWidget = new QWidget(this);
-    QVBoxLayout *vBoxLayout = new QVBoxLayout(centralWidget);
-    vBoxLayout->setSpacing(6);
-    vBoxLayout->setContentsMargins(0,0,8,5); //改，（8,8,8,8）
-    vBoxLayout->addWidget(mainSplitter);
-    setCentralWidget(centralWidget);
-    setDeleteFile(3); //新增
-    this->setContentsMargins(8,0,0,0); //新增
-    connect(actionOpenNewFile, SIGNAL(triggered()), this, SLOT(slotOpen()));
-    connect(actionSaveAll, SIGNAL(triggered()), this, SLOT(slotSave()));
-    connect(actionDeleteAll, SIGNAL(triggered()), this, SLOT(slotDelete()));
-    connect(actionOpenOldFile, SIGNAL(triggered()), this, SLOT(slotLoadFile()));
-    connect(actionReport, SIGNAL(triggered()), this, SLOT(slotReport()));
-    connect(actionAllelePairAlign, SIGNAL(triggered()), this, SLOT(slotAlignPair()));
-    connect(actionLabAlleleAlign, SIGNAL(triggered()), this, SLOT(slotAlignLab()));
-    connect(actionMarkSuccessfulAll, SIGNAL(triggered()), this, SLOT(slotMarkAllSampleApproved()));
-    connect(actionMarkFinishedAll, SIGNAL(triggered()), SLOT(slotMarkAllSampleReviewed()));
-    connect(actionReset, SIGNAL(triggered()), this, SLOT(slotReset()));
-    connect(actionForward,SIGNAL(triggered()), exonNavigator, SLOT(slotMisPosForward()));
-    connect(actionBackward, SIGNAL(triggered()), exonNavigator, SLOT(slotMisPosBackward()));
-    connect(actionControl, SIGNAL(triggered()), this, SLOT(slotControl()));
-    connect(actionExonTrim, SIGNAL(triggered()), this, SLOT(slotSetExonTrim()));
-    connect(actionUpdateDatabase, SIGNAL(triggered()), this, SLOT(slotUpdateDatabase()));
-    connect(actionDocument, SIGNAL(triggered()), this, SLOT(slotDocument()));
-    connect(actionAbout, SIGNAL(triggered()), this, SLOT(slotAbout()));
+    ui->verticalLayout->addWidget(mainSplitter);
+    ui->actionAnalyze->setEnabled(false);
+    ui->statusbarleft->setStyleSheet("QLabel{border:1px solid rgb(139,139,139);}");
+    ui->statusbarright->setStyleSheet("QLabel{border:1px solid rgb(139,139,139);}");
 
-    connect(this, SIGNAL(signalAllelePair(QString&,QString&)), baseAlignTable, SLOT(slotAllelePairChanged(QString&,QString&)));
-
-
-    connect(this, SIGNAL(signalFileChanged(SignalInfo&,int)), sampleTree, SLOT(slotFileChanged(SignalInfo&,int)));//,Qt::QueuedConnection);
-    connect(sampleTree, SIGNAL(signalFileChnaged(SignalInfo&,int)),main_mscillogram,SLOT(slotRegionShowDataChanged(SignalInfo&,int)));
-    connect(matchListTable, SIGNAL(signalFileChanged(SignalInfo&,int)), sampleTree, SLOT(slotFileChanged(SignalInfo&,int)));
-    connect(sampleTree, SIGNAL(signalFileChnaged(SignalInfo&,int)), matchListTable, SLOT(slotFileChanged(SignalInfo&,int)));
-    connect(sampleTree, SIGNAL(signalFileChnaged(SignalInfo&,int)), exonNavigator, SLOT(slotFileChanged(SignalInfo&,int)));
-    connect(sampleTree, SIGNAL(signalFileChnaged(SignalInfo&,int)), baseAlignTable, SLOT(slotFileChanged(SignalInfo&,int)));
-    connect(sampleTree, SIGNAL(signalFileChnaged(SignalInfo&,int)), this, SLOT(slotFileChanged(SignalInfo&,int)));
-    connect(sampleTree, SIGNAL(signalGeneName(QString)), align, SLOT(slotGetGeneName(QString))); //新增
-
-    connect(matchListTable, SIGNAL(signalIndelPostion(int)), exonNavigator, SLOT(slotIndelPosition(int)));
-    connect(matchListTable, SIGNAL(signalAllelePair(QString&,QString&)), baseAlignTable, SLOT(slotAllelePairChanged(QString&,QString&)));
-    connect(exonNavigator, SIGNAL(signalFocusPosition(int,int,int)), baseAlignTable, SLOT(slotFocusPosition(int,int,int)));
-
-    connect(baseAlignTable, SIGNAL(signalFocusPosition(int,int,int)), exonNavigator, SLOT(slotFocusPosition(int,int,int)));
-    connect(baseAlignTable, SIGNAL(signalTypeMisMatchPosition(QSet<int>&, int)), exonNavigator, SLOT(slotTypeMisMatchPostionChanged(QSet<int>&, int)));
-
-
-
-    connect(actionApplyOne,SIGNAL(triggered()),main_mscillogram,SLOT(slotaddordecreaseOne()));
-    connect(actionApplyOne,SIGNAL(triggered()),this,SLOT(slotApplyOne()));
-    connect(actionApplyAll,SIGNAL(triggered()),main_mscillogram,SLOT(slotaddordecreaseAll()));
-    connect(actionApplyAll,SIGNAL(triggered()),this,SLOT(slotApplyAll()));
-    connect(analyseLater,SIGNAL(triggered()),this,SLOT(slotAnalyseLater()));
-    connect(analyseNow,SIGNAL(triggered()),this,SLOT(slotAnalyseNow()));
-    connect(analyseLater,SIGNAL(triggered()),main_mscillogram,SLOT(slotanalyseLater()));
-    connect(analyseNow,SIGNAL(triggered()),main_mscillogram,SLOT(slotanalyseNow()));
-    connect(analyse,SIGNAL(triggered()),main_mscillogram,SLOT(slotanalyse()));
-    connect(analyse,SIGNAL(triggered()),this,SLOT(slotanalyse()));
-    connect(main_mscillogram,SIGNAL(signalchangedbp()),this,SLOT(slotchengebp()));
-
-    connect(exonNavigator, SIGNAL(signalFocusPosition(int,int,int)), main_mscillogram, SLOT(slotFocusMark(int,int,int)));
-    connect(baseAlignTable, SIGNAL(signalFocusPosition(int,int,int)), main_mscillogram, SLOT(slotFocusMark(int,int,int)));
-
-    connect(main_mscillogram, SIGNAL(signal_toinform_other(int,int,int)), exonNavigator, SLOT(slotFocusPosition(int,int,int)));
-    connect(main_mscillogram, SIGNAL(signal_toinform_other(int,int,int)), baseAlignTable, SLOT(slotFocusPosition(int,int,int)));
-    connect(main_mscillogram,SIGNAL(signalactApplyAll()),this,SLOT(slotApplyAll()));
-    connect(main_mscillogram,SIGNAL(signalactApplyOne()),this,SLOT(slotApplyOne()));
-    connect(main_mscillogram,SIGNAL(signalactanalyseNow()),this,SLOT(slotAnalyseNow()));
-    connect(main_mscillogram,SIGNAL(signalactanalyseLater()),this,SLOT(slotAnalyseLater()));
-
-
-    connect(main_mscillogram, SIGNAL(signalchangedbp(SignalInfo&,int)), sampleTree, SLOT(slotFileChanged(SignalInfo&,int)));
-    connect(main_mscillogram, SIGNAL(signalchangedbp(SignalInfo&,int)), this, SLOT(slotFileChanged(SignalInfo&,int)));
-
-    connect(main_mscillogram, SIGNAL(signalAB1Information(QString)), this, SLOT(slotMsgStr(QString))); //新增
-
-    connect(actionZoomYAxisIncrease, SIGNAL(triggered()), main_mscillogram, SLOT(slotyRangeRoomUp()));
-    connect(actionZoomYAxisReduce, SIGNAL(triggered()), main_mscillogram, SLOT(slotyRangeRoomDown()));
-    connect(actionZoomYIncrease,SIGNAL(triggered()),main_mscillogram, SLOT(slotyRoomUp()));
-    connect(actionZoomYReduce,SIGNAL(triggered()),main_mscillogram,SLOT(slotyRoomDown()));
-    connect(actionZoomXIncrease,SIGNAL(triggered()),main_mscillogram, SLOT(slotxRoomUp()));
-    connect(actionZoomXReduce,SIGNAL(triggered()),main_mscillogram,SLOT(slotxRoomDown()));
-    connect(actionZoomReset, SIGNAL(triggered()), main_mscillogram, SLOT(resetRoomSetting()));
-    //    connect(actionReset, SIGNAL(triggered()), main_mscillogram, SLOT(slotReset()));
+    ui->actionApply_All->setIconVisibleInMenu(false);
+    ui->actionApply_One->setIconVisibleInMenu(false);
+    ui->actionEdit_Multi->setIconVisibleInMenu(false);
+    ui->actionEdit_One->setIconVisibleInMenu(false);
 }
 
-//MainWindow::~MainWindow()
-//{
-
-//}
-void MainWindow::setDatabaseInfo(bool has)
+void MainWindow::ConnectSignalandSlot()
 {
-    has_database = has;
+    connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::slotShowOpenDlg);
+    connect(ui->actionLoad, &QAction::triggered, this, &MainWindow::slotShowLoadFileDlg);
+    connect(ui->actionSave, &QAction::triggered, this, &MainWindow::slotShowSaveDlg);
+    connect(ui->actionDelete, &QAction::triggered, this, &MainWindow::slotShowDeleteDlg);
+    connect(ui->actionExport, &QAction::triggered, this, &MainWindow::slotShowExportDlg);
+
+    connect(ui->actionReset, &QAction::triggered, this, &MainWindow::slotReset);
+    connect(ui->actionForward, &QAction::triggered, this, &MainWindow::slotMisPosForward);
+    connect(ui->actionBackward, &QAction::triggered, this, &MainWindow::slotMisPosBackward);
+    connect(ui->actionApproval, &QAction::triggered, this, &MainWindow::slotMarkAllSampleApproved);
+    connect(ui->actionReview, &QAction::triggered, this, &MainWindow::slotMarkAllSampleReviewed);
+    connect(ui->actionAllele_Comparator, &QAction::triggered, this, &MainWindow::slotAlignPair);
+    connect(ui->actionAllele_Alignment, &QAction::triggered, this, &MainWindow::slotAlignLab);
+    connect(ui->actionUpdate_Database, &QAction::triggered, this, &MainWindow::slotUpdateDatabase);
+    connect(ui->actionSet_Thread, &QAction::triggered, this, &MainWindow::slotControl);
+    connect(ui->actionSet_Exon_Trim, &QAction::triggered, this, &MainWindow::slotSetExonTrim);
+
+    connect(ui->actionY_Range_Zoom_Increase, &QAction::triggered, this, &MainWindow::slotyRangeRoomUp);
+    connect(ui->actionY_Range_Zoom_Reduce, &QAction::triggered, this, &MainWindow::slotyRangeRoomDown);
+    connect(ui->actionY_Zoom_Increase, &QAction::triggered, this, &MainWindow::slotyRoomUp);
+    connect(ui->actionY_Zoom_Reduce, &QAction::triggered, this, &MainWindow::slotyRoomDown);
+    connect(ui->actionX_Zoom_Increase, &QAction::triggered, this, &MainWindow::slotxRoomUp);
+    connect(ui->actionX_Zoom_Reduce, &QAction::triggered, this, &MainWindow::slotxRoomDown);
+    connect(ui->actionReset_Zoom_Setting, &QAction::triggered, this, &MainWindow::slotResetRoom);
+
+
+    connect(ui->actionApply_All, &QAction::triggered, this, &MainWindow::slotApplyAll);
+    connect(ui->actionApply_All, &QAction::triggered, m_pMultiPeakWidget, &MultiPeakWidget::slotApplyAll);
+    connect(ui->actionApply_One, &QAction::triggered, this, &MainWindow::slotApplyOne);
+    connect(ui->actionApply_One, &QAction::triggered, m_pMultiPeakWidget, &MultiPeakWidget::slotApplyOne);
+    connect(ui->actionEdit_Multi, &QAction::triggered, this, &MainWindow::slotAnalyseLater);
+    connect(ui->actionEdit_Multi, &QAction::triggered, m_pMultiPeakWidget, &MultiPeakWidget::slotAnalyseLater);
+    connect(ui->actionEdit_One, &QAction::triggered, this, &MainWindow::slotAnalyseNow);
+    connect(ui->actionEdit_One, &QAction::triggered, m_pMultiPeakWidget, &MultiPeakWidget::slotAnalyseNow);
+    connect(ui->actionAnalyze, &QAction::triggered, this, &MainWindow::slotanalyse);
+    connect(m_pMultiPeakWidget, &MultiPeakWidget::signalPeakAct, this, &MainWindow::slotPeakAct);
+
+    connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::slotAbout);
+    connect(ui->actionHelp_Documents, &QAction::triggered, this, &MainWindow::slotHelp);
+
+
+    connect(m_pSampleTreeWidget, &QTreeWidget::itemClicked, this, &MainWindow::slotSampleTreeItemChanged);
+
+    connect(m_pExonNavigatorWidget, &ExonNavigatorWidget::signalExonFocusPosition,
+            this, &MainWindow::slotExonFocusPosition);
+
+    connect(m_pBaseAlignTableWidget, &QTableWidget::itemClicked, this, &MainWindow::slotAlignTableFocusPosition);
+
+    connect(m_pMultiPeakWidget, &MultiPeakWidget::signalPeakFocusPosition, this, &MainWindow::slotPeakFocusPosition);
+
+
+
+    connect(m_pMatchListWidget, &MatchListWidget::signalAllelePair, this, &MainWindow::slotAllelePairChanged);
+
+    connect(m_pBaseAlignTableWidget, &BaseAlignTableWidget::signalTypeMisMatchPosition,
+            this, &MainWindow::slotTypeMisMatchPostion);
+
+    connect(m_pMultiPeakWidget, &MultiPeakWidget::signalSendStatusBarMsg, this , &MainWindow::slotShowStatusBarMsg);
+
+    connect(m_pMultiPeakWidget, &MultiPeakWidget::signalChangeDB, this, &MainWindow::slotChangeDB);
+    connect(m_pMultiPeakWidget, &MultiPeakWidget::signalChangeDBByFile, this, &MainWindow::slotChangeDBByFile);
+
+    connect(m_pSampleTreeWidget, &SampleTreeWidget::signalChangeDBByFile, this, &MainWindow::slotChangeDBByFile);
+
+    connect(m_pMatchListWidget, &MatchListWidget::signalChangeDB, this, &MainWindow::slotChangeDB);
+
+    connect(m_pSampleTreeWidget, &SampleTreeWidget::signalClearAll, this, &MainWindow::slotClearAll);
 }
 
-void MainWindow::onWindowOpen(){
-    emit signalFileChanged(signalInfo_, 1);
-}
-
-void MainWindow::createDefault()
+void MainWindow::DisConnectSignalandSolt()
 {
-    createActions();
-    createMenus();
-    createBars();
 
-    menuFile->addAction(actionOpenNewFile);
-    menuFile->addAction(actionOpenOldFile);
-    menuFile->addSeparator();
-    menuFile->addAction(actionSaveAll);
-    menuFile->addSeparator();
-    menuFile->addAction(actionDeleteAll);
-    menuFile->addAction(actionReport);
-
-    menuTool->addAction(actionReset);
-    menuTool->addSeparator();
-    menuTool->addAction(actionBackward);
-    menuTool->addAction(actionForward);
-    menuTool->addSeparator();
-    menuTool->addAction(actionMarkSuccessfulAll);
-    menuTool->addAction(actionMarkFinishedAll);
-    menuTool->addSeparator();
-    menuTool->addAction(actionAllelePairAlign);
-    menuTool->addAction(actionLabAlleleAlign);
-    menuTool->addAction(actionUpdateDatabase);
-    menuTool->addSeparator();
-    //    menuTool->addAction(actionControl);
-    //    menuTool->addAction(actionExonTrim);
-    menuTool->addAction(menuSet->menuAction());
-
-    menuBar->addAction(menuFile->menuAction());
-    menuBar->addAction(menuTool->menuAction());
-    menuBar->addAction(menuadd->menuAction());
-    menuBar->addAction(menuHelp->menuAction());
-
-    menuadd->addAction(actionApplyOne);
-    menuadd->addAction(actionApplyAll);
-    menuadd->addSeparator();
-    menuadd->addAction(analyseLater);
-    menuadd->addAction(analyseNow);
-    menuadd->addSeparator();
-    menuadd->addAction(analyse);
-
-    menuHelp->addAction(actionAbout);
-    menuHelp->addAction(actionDocument);
-
-    toolBarFile->addAction(actionOpenNewFile);
-    toolBarFile->addAction(actionOpenOldFile);
-    toolBarFile->addAction(actionSaveAll);
-    toolBarFile->addAction(actionDeleteAll);
-    toolBarFile->addAction(actionReport);
-
-    toolBarTool->addAction(actionReset);
-    toolBarTool->addAction(actionBackward);
-    toolBarTool->addAction(actionForward);
-    toolBarTool->addAction(actionMarkSuccessfulAll);
-    toolBarTool->addAction(actionMarkFinishedAll);
-    toolBarTool->addAction(actionAllelePairAlign);
-    toolBarTool->addAction(actionLabAlleleAlign);
-    toolBarTool->addAction(actionUpdateDatabase);
-    //    toolBarTool->addAction(actionControl);
-    //    toolBarTool->addAction(actionExonTrim);
-    toolBarTool->addAction(menuSet->menuAction());
-
-    toolBarPeak->addAction(actionZoomYAxisIncrease);
-    toolBarPeak->addAction(actionZoomYAxisReduce);
-    toolBarPeak->addAction(actionZoomYIncrease);
-    toolBarPeak->addAction(actionZoomYReduce);
-    toolBarPeak->addAction(actionZoomXIncrease);
-    toolBarPeak->addAction(actionZoomXReduce);
-    toolBarPeak->addAction(actionZoomReset);
-
-    this->setMenuBar(menuBar);
-    this->addToolBar(toolBarFile);
-    this->addToolBar(toolBarTool);
-    //   this->insertToolBarBreak(toolToolBar);
-    this->addToolBar(toolBarPeak);
-    //  this->insertToolBarBreak(peakToolBar);
-    this->setStatusBar(statusBar);
 }
 
-void MainWindow::createActions()
+void MainWindow::InitData()
 {
-    actionOpenNewFile = new QAction(QIcon(":/images/opennewfile.png"), tr("Open"), this);
-    actionOpenOldFile = new QAction(QIcon(":/images/openoldfile.png"), tr("Load"), this);
-    actionSaveAll = new QAction(QIcon(":/images/saveall.png"), tr("Save"), this);
-    actionDeleteAll = new QAction(QIcon(":/images/deleteall.png"), tr("Delete"), this);
-    actionReport = new QAction(QIcon(":/images/report.png"), tr("Export"), this);
-
-    actionReset = new QAction(QIcon(":/images/reset.png"), tr("Reset"), this);
-    actionMarkSuccessfulAll = new QAction(QIcon(":/images/marksuccessfulall.png"), tr("Approval"), this);
-    actionMarkFinishedAll = new QAction(QIcon(":/images/markfinishedall.png"), tr("Review"), this);
-    actionBackward = new QAction(QIcon(":/images/backward.png"), tr("Previous Mismatch Position"), this);
-    actionForward = new QAction(QIcon(":/images/forward.png"), tr("Next Mismatch Position"), this);
-    actionAllelePairAlign = new QAction(QIcon(":/images/alignpair.png"), tr("Allele Comparator"), this);
-    actionLabAlleleAlign = new QAction(QIcon(":/images/alignlab.png"), tr("Allele Alignment"), this);
-
-    actionShowGSSPZCode = new QAction(tr("Show GSSP Z Code"), this);
-    actionShowUndefinedExon = new QAction(tr("Show Undefined Exon"), this);
-
-    actionApplyOne=new QAction(QIcon(":/images/apply.png"),"Apply One",this);
-    actionApplyOne->setIconVisibleInMenu(false);
-    actionApplyAll=new QAction(QIcon(":/images/apply.png"),"Apply All",this);
-    actionApplyAll->setIconVisibleInMenu(true);
-    analyseLater=new QAction(QIcon(":/images/apply.png"),"Edit Multi",this);
-    analyseLater->setIconVisibleInMenu(false);
-    analyseLater->setShortcut(QKeySequence(Qt::ALT+Qt::Key_A));
-    analyseNow=new QAction(QIcon(":/images/apply.png"),"Edit One",this);
-    analyseNow->setIconVisibleInMenu(true);
-    analyseNow->setShortcut(QKeySequence(Qt::ALT+Qt::Key_S));
-    analyse=new QAction("Analyze",this);
-    analyse->setEnabled(false);
-    //    analyse->setShortcut(QKeySequence(Qt::CTRL+Qt::ALT+Qt::Key_D));
-    analyse->setShortcut(QKeySequence(Qt::CTRL+Qt::Key_A));
-
-    actionZoomYAxisIncrease = new QAction(QIcon(":/images/zoomyaxisincrease.png"), tr("Y Range Zoom (+)"), this);
-    actionZoomYAxisReduce = new QAction(QIcon(":/images/zoomyaxisreduce.png"), tr("Y Range Zoom (-)"), this);
-    actionZoomYIncrease = new QAction(QIcon(":/images/zoomyincrease.png"), tr("Y Zoom (+)"), this);
-    actionZoomYReduce = new QAction(QIcon(":/images/zoomyreduce.png"), tr("Y Zoom (-)"), this);
-    actionZoomXIncrease = new QAction(QIcon(":/images/zoomxincrease.png"), tr("X Zoom (+)"), this);
-    actionZoomXReduce = new QAction(QIcon(":/images/zoomxreduce.png"), tr("X Zoom (-)"), this);
-    actionZoomReset = new QAction(QIcon(":/images/zoomreset.png"), tr("Reset Zoom Setting"), this);
-
-    actionOpenNewFile->setShortcut(tr("Ctrl+O"));
-    actionOpenOldFile->setShortcut(tr("Ctrl+L"));
-    actionSaveAll->setShortcut((tr("Ctrl+S")));
-    actionDeleteAll->setShortcut((tr("Ctrl+D")));
-    actionReset->setShortcut(tr("Ctrl+R"));
-    actionBackward->setShortcut(tr("Left"));
-    actionForward->setShortcut(tr("Right"));
-    actionReport->setShortcut(tr("Ctrl+E"));
-
-    actionControl = new QAction(tr("Set Thread"), this);
-    actionExonTrim = new QAction(tr("Set Exon Trim"), this);
-    menuSet = new QMenu(tr("Setting"),this);
-    menuSet->setIcon(QIcon(":/images/control.png"));
-    menuSet->addAction(actionControl);
-    menuSet->addAction(actionExonTrim);
-
-    actionUpdateDatabase = new QAction(QIcon(":/images/updatedatabase.png"), tr("Update Database"), this);
-    actionAbout = new QAction(tr("About"), this);
-    actionDocument = new QAction(tr("Help Documents"), this);
+    m_pSampleTreeWidget->SetTreeData();
 }
 
-void MainWindow::createMenus()
+void MainWindow::slotShowOpenDlg()
 {
-    menuFile = new QMenu(tr("File"), this);
-    menuTool = new QMenu(tr("Tool"), this);
-    menuadd=new QMenu(tr("Zoom"),this);
-    menuFileTree = new QMenu(this);
-    menuTypeTable = new QMenu(this);
-    menuRegionShow = new QMenu(this);
+    OpenFileDialog dlg(this);
+    dlg.exec();
 
-    menuHelp = new QMenu(tr("Help"),this);
+    m_pMatchListWidget->SetRefresh(true);
+    m_pExonNavigatorWidget->SetRefresh(true);
+    m_pBaseAlignTableWidget->SetRefresh(true);
+    m_pMultiPeakWidget->SetRefresh(true);
+    m_pSampleTreeWidget->SetTreeData();
 }
 
-void MainWindow::createBars()
+void MainWindow::SetStatusbar()
 {
-    menuBar = new QMenuBar(this);
-    //    menuBar->setMinimumHeight(100);
+    QString strA("<b><font color='#39B54A' size='5'>A</font></b>");
+    QString strC("<b><font color='#0000ff' size='5'>C</font></b>");
+    QString strG("<b><font color='#000000' size='5'>G</font></b>");
+    QString strT("<b><font color='#ff0000' size='5'>T</font></b>");
 
-    toolBarFile = new QToolBar(tr("File Tool Bar"), this);
-    toolBarTool = new QToolBar(tr("Tool Tool Bar"), this);
-    toolBarPeak = new QToolBar(tr("Peak Tool Bar"), this);
-    QSize size(32,32); //改（32,25）
-    toolBarFile->setIconSize(size);
-    toolBarTool->setIconSize(size);
-    toolBarPeak->setIconSize(size);
-    statusBar = new QStatusBar(this);
-    statusBar->setObjectName("statusBar");
-    StatusBarWidget *atgcn = new StatusBarWidget; //改类名
-    statusBar->setContentsMargins(7,0,0,0); //改(6,0,0,0)
-    atgcn->setMinimumHeight(40); //新增
-    statusBar->addWidget(atgcn);
-    msgLabel = new QLineEdit; //新增
-    msgLabel->setObjectName("msgLabel");//新增
-    msgLabel->setEnabled(false);//新增
-    msgLabel->setText("Ready");//新增
-    msgLabel->setMinimumHeight(40);//新增
-    msgLabel->setMinimumWidth(872);//新增
-    msgLabel->setMinimumWidth(872);//新增
-    statusBar->addWidget(msgLabel);//新增
+    QString strR("<b><font color='#C1272d' size='5'>R-</font></b>");
+    QString strY("<b><font color='#C1272d' size='5'>Y-</font></b>");
+    QString strK("<b><font color='#C1272d' size='5'>K-</font></b>");
+    QString strM("<b><font color='#C1272d' size='5'>M-</font></b>");
+    QString strS("<b><font color='#C1272d' size='5'>S-</font></b>");
+    QString strW("<b><font color='#C1272d' size='5'>W-</font></b>");
+    QString strB("<b><font color='#C1272d' size='5'>B-</font></b>");
+    QString strD("<b><font color='#C1272d' size='5'>D-</font></b>");
+    QString strH("<b><font color='#C1272d' size='5'>H-</font></b>");
+    QString strV("<b><font color='#C1272d' size='5'>V-</font></b>");
+    QString strspace("  ");
+
+    QString str = strR + strA+ strG + strspace +
+                  strY + strT + strC + strspace +
+                  strK + strG + strT + strspace +
+                  strM + strA + strC + strspace +
+                  strS + strG + strC + strspace +
+                  strW + strA + strT + strspace +
+                  strB + strG + strT + strC + strspace +
+                  strD + strG + strA + strT + strspace +
+                  strH + strA + strC + strT + strspace +
+                  strV + strG + strC + strA;
+    ui->statusbarleft->setText(str);
 }
 
-void MainWindow::slotOpen()
+void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
 {
-//    char *s1 = "BDCABA";
-//    char *s2 = "ABCBDAB";
-//    struct_align al;
-//    al.r1 = NULL;
-//    al.r2 = NULL;
-
-//    semigloblalalign_new(s1, s2, &al, 7);
-
-//    FileAlignResultNew tmp_result;
-//    optimize_boundary(&al, &tmp_result, true);
-//    return;
-
-    if(!has_database)
+    if(item == nullptr)
     {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
         return;
     }
 
-    OpenFileDlg openFileDlg;
-    bool isOpen = false;
-    SignalInfo signalInfo;
-    openFileDlg.setData(&isOpen, &signalInfo);
-    openFileDlg.exec();
-    if(isOpen)
+    QTreeWidgetItem *pParent = item->parent();
+    if(pParent == nullptr)
     {
-        //        if(signalInfo_.sampleName.isEmpty())
-        //        {
-        //            signalInfo_ = signalInfo;
-        //        }
-        emit signalFileChanged(signalInfo_, 1);
-        timerID = startTimer(60000); //新增
+        return;
     }
+    QString str_sample = pParent->text(0);
+    QString str_gene  = pParent->text(1);
 
-}
-void MainWindow::slotSave()
-{
-    if(!has_database)
+    QString strfile = item->text(0);
+    QString str_info = item->text(1);
+    LOG_DEBUG("%s",strfile.toStdString().c_str());
+    m_pMatchListWidget->SetTableData(str_sample,strfile, str_info, col);
+
+    if(!strfile.contains(".ab1"))//如果不是ab1文件，左侧的模块不用刷新
     {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
         return;
     }
 
-    SaveFileDlg save;
-    save.exec();
-}
-void MainWindow::slotDelete()
-{
-    if(!has_database)
+    m_pSelectItem = item;
+    m_str_SelectFile = strfile;
+    m_str_SelectSample = str_sample;
+
+    m_pExonNavigatorWidget->SetExonData(str_sample, str_gene);
+
+    m_pBaseAlignTableWidget->SetAlignTableData(str_sample,strfile, str_info, col);
+
+    int index_exon = str_info.left(1).toInt();
+    if(str_info.contains("Filter"))//如果是gssp文件
     {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
+        index_exon = item->data(0,Qt::UserRole).toInt();
+    }
+
+    m_pMultiPeakWidget->SetPeakData(str_sample,index_exon);
+
+
+    int startpos;
+    int selectpos;
+    int exonstartpos;
+    m_pExonNavigatorWidget->setSelectFramePosition(index_exon, startpos, selectpos, exonstartpos);
+    LOG_DEBUG("%d %d %d %d",index_exon, startpos, selectpos, exonstartpos);
+
+    int i_columnPos = selectpos - startpos;
+    int sliderPos = i_columnPos*25-20;
+    m_pBaseAlignTableWidget->selectColumn(i_columnPos);
+    m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
+
+    int i_sub = selectpos - exonstartpos;
+    m_pMultiPeakWidget->SetSelectPos(i_sub);
+}
+
+//导航条起始pos,选中的峰图pos，选中的导航条起始pos,选中的导航条index
+void MainWindow::slotExonFocusPosition(int startpos, int selectpos, int exonstartpos, int index)
+{
+    LOG_DEBUG("%d %d %d %d",startpos, selectpos, exonstartpos, index);
+    int i_columnPos = selectpos - startpos; //二者之差为表格的第几列
+    int sliderPos = i_columnPos*25+8;
+    m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
+    m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
+
+    int i_sub = selectpos - exonstartpos;
+    m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
+    m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index);
+    m_pMultiPeakWidget->SetSelectPos(i_sub);
+}
+
+void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
+{
+    int selectpos;
+    int exonstartpos;
+    int index;
+
+    int i_colnum = item->column();
+    QTableWidgetItem *item_first = item->tableWidget()->item(0,i_colnum);
+    if(i_colnum < 1 || item_first->text().isEmpty())
+    {
         return;
     }
 
-    bool isDone = false;
-    DeleteFileDlg deleteFileDlg(&isDone, 0);
-    deleteFileDlg.exec();
-    if(isDone)
-    {
-        killTimer(timerID); //新增
-        signalFileChanged(signalInfo_, 1);
-    }
+    m_pExonNavigatorWidget->SetSelectPos(i_colnum, selectpos, exonstartpos ,index);
+    LOG_DEBUG("%d %d %d %d",i_colnum, selectpos, exonstartpos ,index);
+
+    int i_sub = selectpos - exonstartpos;
+    m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
+    m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index);
+    m_pMultiPeakWidget->SetSelectPos(i_sub);
 }
 
-void MainWindow::slotLoadFile()
+void MainWindow::slotPeakFocusPosition(int index, int colnum)
 {
-    if(!has_database)
-    {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
-        return;
-    }
+    LOG_DEBUG("%d %d",index, colnum);
+    int i_columnPos;
+    m_pExonNavigatorWidget->SetSelectFramePos(index, colnum,i_columnPos);
+    m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
+    m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(i_columnPos*25+8);
+}
 
-    bool isDone = false;
-    LoadFileDlg load(&isDone, 0);
+
+void MainWindow::slotShowSaveDlg()
+{
+    SaveFileDlg dlg(this);
+    dlg.exec();
+}
+
+
+void MainWindow::slotShowLoadFileDlg()
+{
+    LoadFileDlg load(this);
     load.exec();
-    if(isDone)
-    {
-        emit signalFileChanged(signalInfo_, 1);
-        timerID = startTimer(60000); //新增
-    }
 }
 
-void MainWindow::slotReport()
+void MainWindow::slotShowDeleteDlg()
 {
-    if(!has_database)
-    {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
-        return;
-    }
+    DeleteFileDlg dlg(this);
+    dlg.exec();
+}
 
-    ReportDlg report;
-    report.setVersionName(VERSION); //新增
+void MainWindow::slotShowExportDlg()
+{
+    ReportDlg report(this);
+    report.setVersion(VERSION); //新增
     report.exec();
-    //    QString fileName = QFileDialog::getSaveFileName(this);
-    //    //qDebug()<<fileName;
-    //    printReport(fileName);
-}
-
-void MainWindow::slotFileChanged(SignalInfo &signalInfo, int type)
-{
-    signalInfo_ = signalInfo;
-}
-
-void MainWindow::slotAlignPair()
-{
-    if(!has_database)
-    {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
-        return;
-    }
-    QStringList typeResultList = matchListTable->getTypeResult(); //新增
-    QStringList typeResult; //新增
-
-    AllelePairDlg align;
-    QString allele1, allele2;
-    align.setData(signalInfo_.geneName, &allele1, &allele2);
-    if(typeResultList.size() != 0) //新增
-    {
-        typeResult = typeResultList[0].split(","); //新增
-        if(typeResult.size()==2){
-            align.findComboxItem(typeResult[1],typeResult[1]); //新增
-        }else if(typeResult.size()>2){
-            align.findComboxItem(typeResult[1],typeResult[2]); //新增
-        }
-    }
-    align.exec();
-    if(!allele1.isEmpty()&&!allele2.isEmpty())
-    {
-        emit signalAllelePair(allele1, allele2);
-    }
-}
-
-void MainWindow::slotAlignLab()
-{
-    if(!has_database)
-    {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
-        return;
-    }
-
-    align->show();
-}
-
-void MainWindow::slotMarkAllSampleApproved()
-{
-    if(!has_database)
-    {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
-        return;
-    }
-
-    QMessageBox informationBox;
-    informationBox.setWindowTitle(tr("Soap Typing"));
-    informationBox.setIcon(QMessageBox::Information);
-    informationBox.setText(tr("Would you really like to Mark all samples as approved"));
-    informationBox.setStandardButtons(QMessageBox::Yes|QMessageBox::No);
-    switch(informationBox.exec())
-    {
-    case QMessageBox::Yes:
-        break;
-    case QMessageBox::No:
-        return;
-    default:
-        return;
-    }
-
-    markAllSampleApproved();
-    emit signalFileChanged(signalInfo_, 1);
-}
-
-void MainWindow::slotMarkAllSampleReviewed()
-{
-    if(!has_database)
-    {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
-        return;
-    }
-
-    QMessageBox informationBox;
-    informationBox.setWindowTitle(tr("Soap Typing"));
-    informationBox.setIcon(QMessageBox::Information);
-    informationBox.setText(tr("Would you really like to Marked all samples as reviewed?"));
-    informationBox.setStandardButtons(QMessageBox::Yes|QMessageBox::No);
-    switch(informationBox.exec())
-    {
-    case QMessageBox::Yes:
-        break;
-    case QMessageBox::No:
-        return;
-    default:
-        return;
-    }
-    int t=markAllSampleReviewed();
-    if(t==1)
-    {
-        QMessageBox::warning(this, tr("Soap Typing"),tr("Please unlock the sample witch were marked approved"));
-    }
-    emit signalFileChanged(signalInfo_, 1);
 }
 
 void MainWindow::slotReset()
-{
-    if(!has_database)
-    {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
-        return;
-    }
+{   
+    QStringList str_list = m_str_SelectFile.split('_');
 
-    if(signalInfo_.sampleName.isEmpty())
-    {
-        return;
-    }
-    int isApproved = getMarkTypeBySampleName(signalInfo_.sampleName.toAscii());
+    int isApproved = SoapTypingDB::GetInstance()->getMarkTypeBySampleName(str_list.at(0));
     if(isApproved == APPROVED || isApproved == -1)
     {
         QMessageBox::warning(this, tr("Soap Typing"),tr("Please unlock the sample as it was marked approved"));
         return;
     }
     QString info;
-    info.append(QString("Exon %1:%2\n").arg(signalInfo_.exonIndex).arg(signalInfo_.rOrF));
-    if(signalInfo_.isGssp)
+    info.append(QString("Exon %1\n").arg(str_list.at(2)));
+    bool bIsGssp = true;
+    if(str_list.at(2).contains('R') || str_list.at(2).contains('F'))
+    {
+        bIsGssp = false;
+    }
+    else
     {
         info.append("Is Gssp file\n");
     }
-    info.append(QString("File: %1\n").arg(signalInfo_.fileName));
+
+    info.append(QString("File: %1\n").arg(m_str_SelectFile));
     info.append(QString("Would you like to reset this file?"));
-    QMessageBox informationBox;
+    QMessageBox informationBox(this);
     informationBox.setWindowTitle(tr("SoapTyping"));
     informationBox.setIcon(QMessageBox::Information);
     informationBox.setText(info);
@@ -571,16 +385,40 @@ void MainWindow::slotReset()
     switch(informationBox.exec())
     {
     case QMessageBox::Yes:
-        if(signalInfo_.isGssp)
-        {
-            resetGsspFileByFileName(signalInfo_.fileName.toAscii());
-        }
-        else
-        {
-            resetFileByFileName(signalInfo_.fileName.toAscii());
-        }
-        analysisSample(signalInfo_.sampleName.toAscii());
-        emit signalFileChanged(signalInfo_, 1);
+    {
+        SoapTypingDB::GetInstance()->resetFileByFileName(str_list.at(0), bIsGssp);
+        slotChangeDB(str_list.at(0));
+        break;
+    }
+    case QMessageBox::No:
+        break;
+    default:
+        break;
+    }
+}
+
+void MainWindow::slotMisPosForward()
+{
+    m_pExonNavigatorWidget->ActForward();
+}
+
+void MainWindow::slotMisPosBackward()
+{
+    m_pExonNavigatorWidget->ActBackward();
+}
+
+void MainWindow::slotMarkAllSampleApproved()
+{
+    QMessageBox informationBox(this);
+    informationBox.setWindowTitle(tr("Soap Typing"));
+    informationBox.setIcon(QMessageBox::Information);
+    informationBox.setText(tr("Would you really like to Mark all samples as approved"));
+    informationBox.setStandardButtons(QMessageBox::Yes|QMessageBox::No);
+    switch(informationBox.exec())
+    {
+    case QMessageBox::Yes:
+        SoapTypingDB::GetInstance()->markAllSampleApproved();
+        m_pSampleTreeWidget->SetTreeData();
         break;
     case QMessageBox::No:
         break;
@@ -589,52 +427,157 @@ void MainWindow::slotReset()
     }
 }
 
-
-
-void MainWindow::slotApplyAll()
+void MainWindow::slotMarkAllSampleReviewed()
 {
-    actionApplyAll->setIconVisibleInMenu(true);
-    actionApplyOne->setIconVisibleInMenu(false);
-}
-
-void MainWindow::slotApplyOne()
-{
-    actionApplyAll->setIconVisibleInMenu(false);
-    actionApplyOne->setIconVisibleInMenu(true);
-}
-
-void MainWindow::slotControl()
-{
-    SetDlg set;
-    set.exec();
-    matchListTable->setConfig();
-    matchListTable->slotFileChanged(signalInfo_, 1);
-}
-
-void MainWindow::slotSetExonTrim()
-{
-    if(!has_database)
+    QMessageBox informationBox(this);
+    informationBox.setWindowTitle(tr("Soap Typing"));
+    informationBox.setIcon(QMessageBox::Information);
+    informationBox.setText(tr("Would you really like to Marked all samples as reviewed?"));
+    informationBox.setStandardButtons(QMessageBox::Yes|QMessageBox::No);
+    switch(informationBox.exec())
     {
-        QMessageBox::warning(0, "SoapTyping","Database files are missing!");
+    case QMessageBox::Yes:
+    {
+        int t = SoapTypingDB::GetInstance()->markAllSampleReviewed();
+        if(t==1)
+        {
+            QMessageBox::warning(this, tr("Soap Typing"),tr("Please unlock the sample witch were marked approved"));
+        }
+        m_pSampleTreeWidget->SetTreeData();
+        break;
+    }
+    case QMessageBox::No:
+        return;
+    default:
         return;
     }
 
-    ExonTimDlg exonTrimDlg;
-    exonTrimDlg.exec();
+}
+
+void MainWindow::slotAlignPair()
+{
+    QStringList str_list = m_str_SelectFile.split('_');
+    if(str_list.isEmpty())
+    {
+        return;
+    }
+    QStringList typeResultList = m_pMatchListWidget->GetMatchList();
+    QStringList typeResult;
+
+    AllelePairDlg align(this);
+    align.SetData(str_list.at(1));
+    align.exec();
+    QString allele1, allele2;
+    align.getSelectAllele(allele1,allele2);
+    if(!allele1.isEmpty()&&!allele2.isEmpty())
+    {
+        slotAllelePairChanged(allele1, allele2);
+    }
+}
+
+void MainWindow::slotAlignLab()
+{
+    AlignmentDlg dlg(this);
+    dlg.exec();
 }
 
 void MainWindow::slotUpdateDatabase()
 {
-    UpdateDlg updateDlg;
-    updateDlg.exec();
+
 }
 
-void MainWindow::slotDocument()
+void MainWindow::slotControl()
+{
+    SetDlg dlg(this);
+    dlg.exec();
+}
+
+void MainWindow::slotSetExonTrim()
+{
+    ExonTimDlg exonTrimDlg(this);
+    exonTrimDlg.exec();
+}
+
+void MainWindow::slotyRangeRoomUp()
+{
+    m_pMultiPeakWidget->AdjustPeakHeight(20);
+}
+
+void MainWindow::slotyRangeRoomDown()
+{
+    m_pMultiPeakWidget->AdjustPeakHeight(-20);
+}
+
+void MainWindow::slotyRoomUp()
+{
+    m_pMultiPeakWidget->AdjustPeakY(1);
+}
+
+void MainWindow::slotyRoomDown()
+{
+    m_pMultiPeakWidget->AdjustPeakY(-1);
+}
+
+void MainWindow::slotxRoomUp()
+{
+    m_pMultiPeakWidget->AdjustPeakX(14);
+}
+
+void MainWindow::slotxRoomDown()
+{
+    m_pMultiPeakWidget->AdjustPeakX(-14);
+}
+
+void MainWindow::slotResetRoom()
+{
+    m_pMultiPeakWidget->RestorePeak();
+}
+
+void MainWindow::slotApplyOne()
+{
+    ui->actionApply_All->setIconVisibleInMenu(false);
+    ui->actionApply_One->setIconVisibleInMenu(true);
+}
+
+void MainWindow::slotApplyAll()
+{
+    ui->actionApply_All->setIconVisibleInMenu(true);
+    ui->actionApply_One->setIconVisibleInMenu(false);
+}
+
+void MainWindow::slotAnalyseLater()
+{
+    ui->actionEdit_Multi->setIconVisibleInMenu(true);
+    ui->actionEdit_One->setIconVisibleInMenu(false);
+}
+
+void MainWindow::slotAnalyseNow()
+{
+    ui->actionEdit_Multi->setIconVisibleInMenu(false);
+    ui->actionEdit_One->setIconVisibleInMenu(true);
+}
+
+void MainWindow::slotanalyse()
+{
+    ui->actionAnalyze->setEnabled(false);
+}
+
+void MainWindow::slotAbout()
+{
+    QMessageBox message(QMessageBox::NoIcon, "About SoapTyping Software",
+                        QString("SoapTyping V%1\nCopyright (C) 2012-2013 BGI").arg(VERSION),
+                        QMessageBox::Ok,this);
+    message.setIconPixmap(QPixmap(":/png/images/about.png"));
+
+    message.exec();
+}
+
+void MainWindow::slotHelp()
 {
     QFileInfo info("Documents/Help.pdf");
     if(info.exists())
     {
-        bool ok=QDesktopServices::openUrl(QUrl(info.absoluteFilePath(), QUrl::TolerantMode));
+        bool ok= QDesktopServices::openUrl(QUrl(info.absoluteFilePath(), QUrl::TolerantMode));
         if(!ok)
         {
             QMessageBox::warning(this, "SoapTyping", QString("Can't open %1").arg(info.absoluteFilePath()));
@@ -646,19 +589,51 @@ void MainWindow::slotDocument()
     }
 }
 
-void MainWindow::slotAbout()
+void MainWindow::slotAllelePairChanged(QString &allele1, QString &allele2)
 {
-    QMessageBox message(QMessageBox::NoIcon, "About SoapTyping Software", QString("SoapTyping V%1\nCopyright (C) 2012-2013 BGI").arg(VERSION));
-    message.setIconPixmap(QPixmap(":/images/about.png"));
-    message.exec();
+    m_pBaseAlignTableWidget->SetAllelePairData(allele1, allele2);
 }
 
-/**新增Start**/
-void MainWindow::slotMsgStr(QString msgstr)
+void MainWindow::slotTypeMisMatchPostion(QSet<int> &typeMismatchPos, int type)
 {
-    msgLabel->setText(msgstr);
+    m_pExonNavigatorWidget->SetTypeMisPos(typeMismatchPos);
 }
-/**新增End**/
+
+void MainWindow::slotShowStatusBarMsg(const QString &msg)
+{
+    ui->statusbarright->setText(msg);
+}
+
+//由于峰图进行了编辑或变更，导致数据库发生变化，除峰图外，其他需要刷新
+void MainWindow::slotChangeDB(const QString &str_samplename)
+{
+    AnalysisSampleThreadTask *pTask = new AnalysisSampleThreadTask(str_samplename);
+    pTask->run();
+    delete pTask;
+
+    m_pMatchListWidget->SetRefresh(true);
+    m_pExonNavigatorWidget->SetRefresh(true);
+    m_pBaseAlignTableWidget->SetRefresh(true);
+    slotSampleTreeItemChanged(m_pSelectItem, 0);
+}
+
+//由于样品文件的删除，导致数据库发生变化，需要重新刷新界面
+void MainWindow::slotChangeDBByFile(QVector<QString> &vec_samplename)
+{
+    foreach(const QString &str,vec_samplename)
+    {
+        AnalysisSampleThreadTask *pTask = new AnalysisSampleThreadTask(str);
+        pTask->run();
+        delete pTask;
+    }
+
+    m_pMatchListWidget->SetRefresh(true);
+    m_pExonNavigatorWidget->SetRefresh(true);
+    m_pBaseAlignTableWidget->SetRefresh(true);
+    m_pMultiPeakWidget->SetRefresh(true);
+    m_pSampleTreeWidget->SetTreeData();
+}
+
 void MainWindow::closeEvent(QCloseEvent *e)
 {
     QMessageBox informationBox;
@@ -679,96 +654,40 @@ void MainWindow::closeEvent(QCloseEvent *e)
         break;
     }
     if(!cls)
+    {
         e->ignore();
-}
-/**新增Start**/
-void MainWindow::timerEvent(QTimerEvent *e)
-{
-    //SaveFileDlg save;
-    //save.autoSaveAllFile();
-}
-
-void MainWindow::setDeleteFile(int dateNum)
-{
-    QDir dir("Tmp");
-    QFileInfoList fileList;
-    QFileInfo curFile;
-    if(!dir.exists())  {return;}//文件不存，则返回false
-    fileList=dir.entryInfoList(QDir::Dirs|QDir::Files
-                               |QDir::Readable|QDir::Writable
-                               |QDir::Hidden|QDir::NoDotAndDotDot
-                               ,QDir::Name);
-    int size = fileList.size();
-    QDateTime curDate = QDateTime::currentDateTime();
-    for(int i = 0; i< size;i++)
-    {
-        curFile = fileList[i];
-        if(curFile.isDir())
-        {
-            QString curFilePath = curFile.filePath();
-            QStringList curFileName = curFilePath.split("_",QString::SkipEmptyParts);
-            QString oldFileTime = curFileName[1];
-            QDateTime oldDate = QDateTime::fromString(oldFileTime, "yyyyMMdd");
-            int date = oldDate.daysTo(curDate);
-            if(date >dateNum)
-            {
-                removeFolderContent(curFilePath);
-            }
-        }
     }
 }
 
-bool MainWindow::removeFolderContent(QString &folderDir)
+void MainWindow::slotClearAll()
 {
-    QDir dir(folderDir);
-    QFileInfoList fileList;
-    QFileInfo curFile;
-    if(!dir.exists())  {return false;}//文件不存，则返回false
-    fileList=dir.entryInfoList(QDir::Dirs|QDir::Files
-                               |QDir::Readable|QDir::Writable
-                               |QDir::Hidden|QDir::NoDotAndDotDot
-                               ,QDir::Name);
-
-    while(fileList.size()>0)//跳出条件
-    {
-        int infoNum=fileList.size();
-        for(int i=infoNum-1;i>=0;i--)
-        {
-            curFile=fileList[i];
-            if(curFile.isFile())//如果是文件，删除文件
-            {
-                QFile fileTemp(curFile.filePath());
-                fileTemp.remove();
-                fileList.removeAt(i);
-            }
-            if(curFile.isDir())//如果是文件夹
-            {
-                QDir dirTemp(curFile.filePath());
-                QFileInfoList fileList1=dirTemp.entryInfoList(QDir::Dirs|QDir::Files
-                                                              |QDir::Readable|QDir::Writable
-                                                              |QDir::Hidden|QDir::NoDotAndDotDot
-                                                              ,QDir::Name);
-                if(fileList1.size()==0)//下层没有文件或文件夹
-                {
-                    dirTemp.rmdir(".");
-                    fileList.removeAt(i);
-                }
-                else//下层有文件夹或文件
-                {
-                    for(int j=0;j<fileList1.size();j++)
-                    {
-                        if(!(fileList.contains(fileList1[j])))
-                            fileList.append(fileList1[j]);
-                    }
-                }
-            }
-        }
-    }
-    QString path;
-    QDir dir1;
-    path=dir1.currentPath();
-    folderDir = path + "/"+folderDir;
-    dir.rmpath(folderDir);
-    return true;
+    m_pMatchListWidget->ClearTable();
+    m_pExonNavigatorWidget->ClearExonNav();
+    m_pExonNavigatorWidget->update();
+    m_pBaseAlignTableWidget->ClearBaseAlignTable();
+    m_pMultiPeakWidget->ClearMultiPeak();
+    m_pMultiPeakWidget->update();
+    slotShowStatusBarMsg(QString("Ready"));
 }
-/**新增End**/
+
+void MainWindow::slotPeakAct(int type)
+{
+    switch (type)
+    {
+    case 1:
+        slotApplyOne();
+        break;
+    case 2:
+        slotApplyAll();
+        break;
+    case 3:
+        slotAnalyseLater();
+        break;
+    case 4:
+        slotAnalyseNow();
+        break;
+    default:
+        break;
+    }
+
+}

@@ -1,351 +1,280 @@
 #ifndef ALL_BASE_STRUCT_H
 #define ALL_BASE_STRUCT_H
-#include"core/ab1.h"
-#include"QString"
-#include<qvector.h>
-#include <QMetaType>
-#include"QMessageBox"
-#include"QFile"
-#include"QTextStream"
 
-typedef struct
-{
-    char        basetype;    	// A T G C (sequences or stored in trace data)
-    int        	pos;        	// position
-    //int         gradient;      	// signal strength value
-    int         qual;       	// quality value if sequence or else 0
-    int         Matchpos;		// 比对到一致性序列的位置，-1表示没匹配上
-    // 加一下与consensus比对的位置
-    QString         signalA; //新增
-    QString         signalT; //新增
-    QString         signalC; //新增
-    QString         signalG; //新增
-} BaseInfor;
+#include <QString>
+#include <QSet>
+#include <QVector>
+#include <QMap>
 
-typedef struct
+enum MarkType
 {
-    QString    basetype;
-    int     pos;
-} ModifyData;
+    OWNED = 0,
+    PENDING,
+    REVIEWED,
+    APPROVED
+};
+enum AnalysisType
+{
+    MATCHTOTAL = 0,
+    MATCHRARE,
+    MATCHBAD,
+    MISMATCH,
+    UNMATCH
+};
 
-typedef struct
+struct ExonAndRF
 {
-    int maxSgnal;
-    int maxQuality;
-} MaxValue;
+    QString exonIndex;      //外显子序号
+    QString rOrF;           //正序or反序
+};
 
-typedef struct
+struct ExonInfoS
 {
-    int pos;
-    int signal;
-    double relative;
+    int exonStartPos;       //外显子开始位置
+    int exonEndPos;         //外显子结束位置
+    QByteArray consensusSeq;   //一致性序列
+};
 
-}Each_Base_Signal;
-typedef struct
+struct ExonInfo
 {
-    int Consen_Pos;
-    char base_type;
-}Base_EditInfo;
-
-struct FileInfomation
-{
-    bool isgssp;
-    QString rOrF;
-    QString samplename;
-    QString genegname;
-    int exonnum;
-    bool isUndefined;
-    //QString genename;
+    int minExonIndex;
+    int maxExonIndex;
+    int exonStartPosition;
+    int exonEndPostion;
+    ExonInfo()
+    {
+        minExonIndex = 100;
+        maxExonIndex = 0;
+        exonStartPosition = 2000;
+        exonEndPostion = -1;
+    }
 };
 
 typedef struct
 {
-    int minrelat;
-    int maxrelat;
-    double maxsiganl;
-    int startindex;
-    int endindex;
-    int maxsignalpos;
-    int startpos;
-    int endpos;
-    short scroe;
-    char base;
-}Peak;
-typedef struct
-{
-    Peak onepeak;
-    int startindex;
-}hypeak;
-
-
+    int leftLimit; //原始序列匹配的起始位置（等同于left_cut）
+    int rightLimit; //原始序列匹配的结束位置（等同于原始序列总长度-right_cut）
+    int *baseMatchConsensusPos; //原始序列长度的数组，从leftLimit到rightLimit保存匹配一致序列的位置（从数据库查询的裁剪起始位置）
+    char *sampleAlign;//对数组sample_alignment进行处理，如果是.替换成-，然后依次复制到sampleAlign数组
+    int  isUnDefined;
+} FileAlignResult;
 
 typedef struct
 {
-    QVector< Peak> PeaksVector;
-    int Pos;
-    int  matchPos;
-    double percent;
-    short score;
-    char base;
-    short maxone;
-
-}Peakinfo;
-
+    int exclude_left_num; //左边剔除的个数
+    int exclude_right_num; //右边剔除的个数
+    int consensus_start; //从数据库查询的，裁剪起始位置
+    int consensus_end; //从数据库查询的，裁剪结束位置
+    char *consensus; //从数据库查询的，经过裁剪的一致性序列
+    char *raw_seq; //从ab文件获取的原始序列
+} FileAlignNew;
 
 typedef struct
 {
-    char type;
-    int pos;
-}analyse;
-typedef struct                                                           //	画图基本信息结构体
-{
-    QVector <int> leftLimits;						                     //	保存每个文件左屏蔽位点
-    QVector <int> rightLimits;                                           //	保存每个文件右屏蔽位点
-    QVector <QString> fileNames;                                         //	用来画图的文件名vector
-    QVector <MaxValue> filemax;
-    QVector <QVector <BaseInfor> >base;                                  //	Baseo结构的base信息vector
-
-    QVector <QVector <Each_Base_Signal> >baseG;                                     //	Baseo结构的baseG信息vector
-    QVector <QVector <Each_Base_Signal> >baseA;                                     //	Baseo结构的baseA信息vector
-    QVector <QVector <Each_Base_Signal> >baseT;                                     //	Baseo结构的baseT信息vector
-    QVector <QVector <Each_Base_Signal> >baseC;                                     //	Baseo结构的baseC信息vector
-    QVector <QVector <Base_EditInfo>  >edit_info;
-
-    QVector <int > excludeleft;
-    QVector <int > excludeRight;
-    QVector <FileInfomation> infor;
-    QVector <QVector <Peak> >  PeaksA;
-    QVector <QVector <Peak> >  PeaksT;
-    QVector <QVector <Peak> >  PeaksC;
-    QVector <QVector <Peak> >  PeaksG;
-    QVector <QVector <Peakinfo> > Peaksinform  ;
-    QVector <int > moves;
-    QVector <double> avgsignal; //新增
-    int currentfile;
-
-    //QVector <int > movePos;
-} RegionShowData;
-
-
-
-
-typedef struct                                                           // 修改碱基信息结构体
-{
-    QString 	filename;                                                // 修改的文件名
-    int 	    pos;							                         // 修改的位置信息
-    QString 	previousBaseType;                                        // 修改之前的碱基型
-    QString	    currentBaseType;                                         // 修改之后的碱基型
-} ChangeInfor;
-
-
-
-
-typedef struct                                                           // 屏蔽信息结构体
-{
-    int         leftBasePos;                                             // 左侧屏蔽位点
-    int         rightBasePos;                                            // 右侧屏蔽位点
-    QString     filename;                                                // 屏蔽文件名
-} ExcludeData;
+    bool is_match; //是否匹配
+    int left_cut; //左边剔除的个数
+    int right_cut; //右边剔除的个数
+    QByteArray consensus_alignment; //从数据库查询的，经过裁剪的一致性序列
+    QByteArray sample_alignment; //从ab文件获取的原始序列，经过最长公共字符序列匹配，以及边界优化得到的序列
+}FileAlignResultNew;
 
 typedef struct
 {
-    double filesxExpand;
-    double  filesyExpand;
-    bool  addordecreaseOne;
-    int curedHigth;
-    int currentfile;
-    int    rightMenuX;
+    char *r1;
+    char *r2;
+    int errors;
+    int start1;
+    int start2;
+    int stop1;
+    int stop2;
 
-} SaveData;
-/*
-struct SignalInfo
-{
-    bool isUndefined;   //若是没有定义, 则外显子没有错配, 型别没有列表,
-    bool isCombined;  //只有型别表有信息, 比对表还不清楚
-    bool isGsspFilter; //型别表显示不一样. 比对表也是
-    bool isGssp; //型别表..
-    int exonIndex;
-    QString sampleName; //样品名, 若换, 其他模块肯定会换
-    QString rOrF;
-    QString geneName;
-    QString fileName;
-    SignalInfo()
+    void clear()
     {
-        isUndefined = false;
-        isCombined = false;
-        isGsspFilter = false;
-        isGssp = false;
-    }
-};*/
-
-struct SignalInfo
-{
-    bool isUndefined;   //若是没有定义, 则外显子没有错配, 型别没有列表,
-    bool isCombined;  //只有型别表有信息, 比对表还不清楚
-    bool isGsspFilter; //型别表显示不一样. 比对表也是
-    bool isGssp; //型别表..
-    short exonIndex;
-    QString sampleName; //样品名, 若换, 其他模块肯定会换
-    QString rOrF;
-    QString geneName;
-    QString fileName;
-    SignalInfo()
-    {
-        isUndefined = false;
-        isCombined = false;
-        isGsspFilter = false;
-        isGssp = false;
-        exonIndex=-1;
-        sampleName="";
-        rOrF="";
-        geneName="";
-        fileName="";
-    }
-
-} ;
-
-typedef struct
-{
-    QString fileName;
-    QString sampleName;
-    QString filePath;
-    bool isExtraFile;
-    QString geneName;
-    int exonIndex;
-    QString rOrF;
-    int exonStartPos;
-    int exonEndPos;
-    QString usefulSequence;
-    QString baseSequence;
-    QString basePostion;
-    QString baseQuality;
-    int baseNumber;
-    QString baseASignal;
-    QString baseTSignal;
-    QString baseGSignal;
-    QString baseCSignal;
-    int signalNumber;
-    int maxSgnal;
-    int maxQuality;
-    double averageBaseWidth;
-    bool isGood;
-    int alignResult;
-    int alignStartPos;
-    int alignEndPos;
-    QString alignInfo;
-    int excludeleft;
-    int excludeRight ;
-    QString editInfo;
-    double avgsignal; //新增
-    bool isgssp;
-
-
-}  FileInfo_ly;
-
-
-
-
-struct FileTable
-{
-    QByteArray fileName;
-    QByteArray sampleName;
-    QString filePath;
-    int isExtraFile;
-    QByteArray geneName;
-    int exonIndex;
-    QByteArray rOrF;
-    int exonStartPos;
-    int exonEndPos;
-    QByteArray usefulSequence;
-    QByteArray baseSequence;
-    QString basePostion;
-    QString baseQuality;
-    int baseNumber;
-    QString baseASignal;
-    QString baseTSignal;
-    QString baseGSignal;
-    QString baseCSignal;
-    int signalNumber;
-    int maxSignal;
-    int maxQuality;
-    float averageBaseWidth;
-    int isGood;
-    int alignResult;
-    int alignStartPos;
-    int alignEndPos;
-    QString alignInfo;
-    int excludeLeft;
-    int excludeRight;
-    QString editInfo;
-    float avgsignal; //新增
-    FileTable()
-    {
-        isExtraFile = 0;
-        averageBaseWidth = 0.0;
-        excludeLeft = -1;
-        excludeRight = -1;
-    }
-};
-Q_DECLARE_METATYPE (FileTable);
-
-struct GsspFileTable
-{
-    QByteArray fileName;
-    QByteArray sampleName;
-    QString filePath;
-    QByteArray gsspName;
-    QByteArray geneName;
-    int exonIndex;
-    QByteArray rOrF;
-    int exonStartPos;
-    int exonEndPos;
-    QByteArray usefulSequence;
-    QByteArray baseSequence;
-    QString basePostion;
-    QString baseQuality;
-    int baseNumber;
-    QString baseASignal;
-    QString baseTSignal;
-    QString baseGSignal;
-    QString baseCSignal;
-    int signalNumber;
-    int maxSignal;
-    int maxQuality;
-    float averageBaseWidth;
-    int isGood;
-    int alignResult;
-    int alignStartPos;
-    int alignEndPos;
-    QByteArray alignInfo;
-    int excludeLeft;
-    int excludeRight;
-    QString editInfo;
-    QString typeResult;
-    QString filterResult;
-    GsspFileTable()
-    {
-        averageBaseWidth = 0.0;
-        excludeLeft = -1;
-        excludeRight = -1;
-    }
-};
-Q_DECLARE_METATYPE(GsspFileTable);
-
-class ErrorWrite{
-public:
-    static void  errorocur(QString error)
-    {
-        QFile data("usebyme.aa");
-        if (!data.open(QFile::WriteOnly | QFile::Text|QFile::Append))
+        if(r1!=NULL)
         {
-            QMessageBox :: warning(0 , " ERROR" , "software broken" );
-            return;
+            free(r1);
+            r1=NULL;
         }
-        QTextStream out(&data);//QDataStream
-        out << error<<"\r\n";
-        data.flush();
-        data.close();
+        if(r2!=NULL)
+        {
+            free(r2);
+            r2=NULL;
+        }
+        errors = 0;
+        start1 = 0;
+        start2 = 0;
+        stop1 = 0;
+        stop2 = 0;
     }
+} align;
+
+struct FileInfo
+{
+    int exonStartPos;
+    int exonEndPos;
+    int isGood;
+    int isUnMatch;
+    QByteArray fileName;
+    QByteArray geneName;
+    QByteArray rOrF;
+    QByteArray gsspName;
+    QByteArray sequence;
+    QSet<int> editPostion;
+};
+
+struct SampleInfo
+{
+    QString sampleName;
+    QString geneName;
+    int analysisType;
+    int minExonIndex;
+    int maxExonIndex;
+    int exonStartPos;
+    int exonEndPos;
+    QByteArray consensusSequence;
+    QByteArray forwardSequence;
+    QByteArray reverseSequence;
+    QByteArray patternSequence;
+    QString mismatchBetweenPC;
+    QString mismatchBetweenFR;
+    QString mmismatchBetweenFR;
+    QString editPostion;
+    QString typeResult;
+    QString combinedResult;
+};
+
+struct AlleleInfo
+{
+    QString alleleName;
+    QByteArray alleleSequence;
+    QString isRare;
+    int isIndel;
+    QString starInfo;
+};
+
+struct PairStartEnd
+{
+    int startIndex;
+    int endIndex;
+};
+
+struct GsspAlleleInfo
+{
+    QString alleleName;
+    QByteArray alleleSequence;
+};
+
+typedef struct FileTreeInfo
+{
+    bool isGssp;
+    int isGood;
+    int analysisType;
+    int exonIndex;
+    QString rOrF;
+    QString gsspName;
+    QString fileName;
+    FileTreeInfo()
+    {
+        isGssp = false;
+        isGood = 0;
+        analysisType = 0;
+        exonIndex = 0;
+        rOrF = "";
+        gsspName = "";
+        fileName = "";
+    }
+}FileTreeInfo_t;
+
+struct SampleTreeInfo_t
+{
+    int analysisType;
+    int markType;
+    QString sampleName;
+    QString geneName;
+    QVector<FileTreeInfo_t> treeinfo;
+};
+
+struct ExonNavigatorInfo
+{
+    int minExonIndex;
+    int maxExonIndex;
+    QVector<int> vec_pcMis;//样品简并序列和一致性序列不兼容
+    QVector<int> vec_frMis; //正反序列不兼容
+    QVector<int> vec_frUnEqual; //正反序列兼容但不同
+    QVector<int> vec_editPos;//编辑过的碱基
+};
+
+struct BaseAlignGsspInfo
+{
+    int gsspFileAlignStartPos;
+    QString gsspName;
+    int gsspPostion;
+    QString gsspSeq;
+    QString gsspFileSeq;
+};
+
+struct BaseAlignSampleInfo
+{
+    int alignStartPos;
+    int alignEndPos;
+    QString consensusSeq;
+    QString forwardSeq;
+    QString reverseSeq;
+    QString patternSeq;
+    QSet<int> pcMisMatchPostion;
+    QSet<int> frMisMatchPostion;
+    QSet<int> editPostion;
+    QMap<QString, BaseAlignGsspInfo> gsspInfoMap;
+    void clear()
+    {
+        alignStartPos = 0;
+        alignEndPos = 0;
+        consensusSeq.resize(0);
+        forwardSeq.resize(0);
+        reverseSeq.resize(0);
+        patternSeq.resize(0);
+        pcMisMatchPostion.clear();
+        frMisMatchPostion.clear();
+        editPostion.clear();
+        gsspInfoMap.clear();
+    }
+};
+
+struct IndelInfo
+{
+    int isIndel;
+    int indelPostion;
+    QString indelInfo;
+};
+
+struct AllelePair
+{
+    QString allele1;
+    QString allele2;
+};
+
+struct GsspTable
+{
+    QString gsspKey;
+    QString gsspName;
+    QString geneName;
+    int exonIndex;
+    QString rOrF;
+    int position;
+    QByteArray base;
+};
+
+struct ExonTrimTable
+{
+    QString etKey;
+    QString geneName;
+    QString exonIndex;
+    QString fOrR;
+    QString exonStart;
+    QString exonEnd;
+    QString excludeLeft;
+    QString excludeRight;
 };
 
 #endif // ALL_BASE_STRUCT_H
+

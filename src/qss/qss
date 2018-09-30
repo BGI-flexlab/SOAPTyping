@@ -1,196 +1,30 @@
 QProgressBar
 {
-    	text-align : center ;
+    text-align:center;
 }
-QMainWindow#mainwindow{
-	background-color:#E8E8E8;
-}
-
-
-FocusBoxFrame#FocusBoxForm{
-   	background-color: rgba(100%,100%,0%,50%);
-    	border: 1px solid rgba(90%,80%,40%,80%);
-}
-
-BaseAlignTable#baseAlignTable{
-	border:1px solid #D3D3D3;
-}
-
-Main_Oscillogram#main_mscillogram{
-	border:1px solid #D3D3D3;
-}
-
-QTableWidget#matchListTable{
-	border:1px solid #D3D3D3;
-}
-QTableWidget#m_MarkTableWidget{
-	border:1px solid #D3D3D3;
-}
-
-SampleTreeWidget#sampleTree{
-	border:1px solid #D3D3D3;
-}
-
-QTableWidget{outline:0px;}
-QTreeWidget{
-	outline:0px;
-}
-
-
 
 QTableView::item:selected{
-        color:black;
-        background:rgba(100%,100%,0%,50%);   
+    color:black;
+    background:rgba(255,255,0,127);
 }
 
 QTableWidget QHeaderView::section
 {  
-	background-color:white;  
-	color:rgb(77,77,77);
-	font-size:16px;
-	font-weight:bold;
-	border: 1px solid #E6E6E6;
+    background-color:white;
+    color:rgb(77,77,77);
+    font-size:16px;
+    font-weight:bold;
+    border: 1px solid #E6E6E6;
 }  
 
-QTableWidget#matchListTable QHeaderView::section
-{  
-	background-color:#ffffff;  
-	color:rgb(77,77,77);
-	font-size:16px;
-	font-weight:bold;
-	border: 0px solid #E6E6E6;
-} 
-
-QScrollArea{
-	border:1px solid #D3D3D3;
-}
-
-QScrollBar:horizontal
-{
-	height:20px;
-	border:0px solid #707070;
-	margin:0px,0px,0px,0px;
-	padding-left:20px;
-	padding-right:20px;
-}
-QScrollBar::handle:horizontal
-{
-	height:20px;
-	min-width:20px;
-	border:0px solid #707070;
-	background:#D3D3D3;
-}
-
-QScrollBar:vertical
-{
-	width:20px;
-	border:0px solid #707070;
-	margin:0px,0px,0px,0px;
-	padding-top:20px;
-	padding-bottom:20px;
-}
-QScrollBar::handle:vertical
-{
-	width:20px;
-	min-height:20px;
-	border:0px solid #707070;
-	background:#D3D3D3;
-}
-
-QScrollBar::add-line:vertical
-{
-	height:20px;width:20px;
-	subcontrol-position:bottom;
-	border-image:url(:/images/putdown-.png);
-}
-QScrollBar::sub-line:vertical
-{
-	height:20px;width:20px;
-	subcontrol-position:top;
-	border-image:url(:/images/putup-.png);
-}
-QScrollBar::add-line:horizontal {
-	height:20px;width:20px;
-	subcontrol-position: right;
-	border-image:url(:/images/putright-.png);
-}
-
-QScrollBar::sub-line:horizontal {
-	height:20px;width:20px;
-	subcontrol-position: left;
-	border-image:url(:/images/putleft-.png);
-}
-
-
-QScrollBar::add-line:vertical:hover
-{
-	height:20px;width:20px;
-	subcontrol-position:bottom;
-	border-image:url(:/images/putdown-bg.png);
-}
-QScrollBar::sub-line:vertical:hover
-{
-	height:20px;width:20px;
-	subcontrol-position:top;
-	border-image:url(:/images/putup-bg.png);
-}
-QScrollBar::add-line:horizontal:hover
-{
-	height:20px;width:20px;
-	subcontrol-position: right;
-	border-image:url(:/images/putright-bg.png);
-}
-
-QScrollBar::sub-line:horizontal:hover
-{
-	height:20px;width:20px;
-	subcontrol-position: left;
-	border-image:url(:/images/putleft-bg.png);
-}
-
-QTreeWidget::item{
-	/*height:38px*/
-}
-
 QTreeWidget::item:selected{
-        color:black;
-        background:rgba(100%,100%,0%,50%);   
-	border:1px solid #D3D3D3;
-	border: 0px;
-}
-QLineEdit#msgLabel{
-	font-size:14px;
-	color:#666666;
-	padding-left:10px;
-	background-color:#ffffff;
-	border:1px solid #D3D3D3;
-}
-QStatusBar::item{
-	border: 0px;
+    color:black;
+    background:rgba(100%,100%,0%,50%);
+    border:1px solid #D3D3D3;
 }
 
-
-QSplitter::handle:horizontal {
-	width:8px;
+QLabel#statusbarright{
+    font-size:16px;
+    color:#8b8b8b;
 }
 
-QSplitter::handle:vertical {
-	height:8px;
-}
-
-QMenuBar{
-	background-color: #ffffff;
-	border:0px;
-	padding: 1px;
-}
-QMenuBar::item {
-	background:transparent; /*ÉèÖÃ±³¾°ÎªÍ¸Ã÷*/
-}
-QToolBar{
-	background-color: #E8E8E8;
-	border: none;
-	padding: 1px;
-}
-QMenu{
-	border:0px;
-}

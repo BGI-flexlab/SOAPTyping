@@ -1,354 +1,192 @@
 #include "savefiledlg.h"
-const QString resultPath = "Result";
-SaveFileDlg::SaveFileDlg(QWidget *parent)
-    :QDialog(parent)
+#include "ui_savefiledlg.h"
+#include "DataBase/soaptypingdb.h"
+#include <QMessageBox>
+#include <QDir>
+#include <QDate>
+#include <QTextStream>
+#include "Core/core.h"
+
+const QString RESULTPATH = "Result";
+
+SaveFileDlg::SaveFileDlg(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::SaveFileDlg)
 {
-    setWindowTitle(tr("Save File"));
-    setWindowFlags(Qt::WindowMaximizeButtonHint);
-    QVBoxLayout *vLayout = new QVBoxLayout(this);
-    QHBoxLayout *hLayout1 = new QHBoxLayout;
-    QHBoxLayout *hLayout2 = new QHBoxLayout;
-    QSpacerItem *spacer = new QSpacerItem(50, 10, QSizePolicy::Expanding, QSizePolicy::Minimum);
-    setSaveFileDlgDefault();
-    hLayout1->addWidget(checkAllBox_);
-    hLayout1->addWidget(saveByDateBox_);
-    hLayout1->addSpacerItem(spacer);
-    hLayout1->addWidget(saveButton_);
-    hLayout1->addWidget(exitButton_);
-
-    hLayout2->addWidget(labelButton_);
-    hLayout2->addWidget(progressBar_);
-    vLayout->addWidget(table_);
-    vLayout->addLayout(hLayout1);
-    vLayout->addLayout(hLayout2);
-    resize(600, 400);
-    setTableDefaultSample();
-
-}
-//新增
-void SaveFileDlg::autoSaveAllFile()
-{
-//20180608close qDebug("fdsfsdfdsfsdfdsfdsf2 wwiwiikjsfjsdfs ");
-    QString tmpPath = "Tmp";
-    QDir dir;
-    dir.mkpath(tmpPath);
-    QDate date(QDate::currentDate());
-    QString dates = date.toString("yyyyMMdd");
-    for(int i=0; i<sampleTreeInfoList_.size(); i++)
-    {
-        QString dirPath = QString("%1%2%3_%4").arg(tmpPath).arg(QDir::separator()).arg(sampleTreeInfoList_.at(i).sampleName.split("_").at(0)).arg(dates);
-        QDir dir0(dirPath);
-        if(!dir0.exists())
-        {
-            QDir dir;
-            dir.mkpath(dirPath);
-        }
-
-
-        QString listFileName = QString("%1%2list.txt").arg(dirPath).arg(QDir::separator());
-        QFile file(listFileName);
-        if(file.exists())
-        {
-            file.remove();
-        }
-        file.open(QFile::WriteOnly);
-        QTextStream stream(&file);
-        QString outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(sampleTreeInfoList_.at(i).sampleName);
-        stream<<"AType:"<<sampleTreeInfoList_.at(i).analysisType<<"\n";
-        stream<<"MType:"<<sampleTreeInfoList_.at(i).markType<<"\n";
-        stream<<"sampleTable:"<<outFile<<"\n";
-        saveSample(sampleTreeInfoList_.at(i).sampleName.toAscii(), outFile, dates);
-
-        for(int j=0; j<sampleTreeInfoList_.at(i).fileTreeInfo.size(); j++)
-        {
-            const FileTreeInfo &fileInfo = sampleTreeInfoList_.at(i).fileTreeInfo.at(j);
-            outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(fileInfo.fileName);
-            stream<<"fileTable:"<<outFile<<"\n";
-            saveFile(fileInfo.fileName.toAscii(), outFile, dirPath, dates);
-        }
-
-        for(int j=0; j<sampleTreeInfoList_.at(i).gsspTreeInfo.size(); j++)
-        {
-            const GsspTreeInfo &gsspInfo = sampleTreeInfoList_.at(i).gsspTreeInfo.at(j);
-            outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(gsspInfo.fileName);
-            stream<<"gsspFileTable:"<<outFile<<"\n";
-            saveGssp(gsspInfo.fileName.toAscii(), outFile, dirPath, dates);
-        }
-        file.close();
-    }
+    ui->setupUi(this);
+    InitUI();
+    setTableDefaultData();
+    ConnectSignalandSlot();
 }
 
-void SaveFileDlg::setSaveFileDlgDefault()
+SaveFileDlg::~SaveFileDlg()
 {
-    saveByDate_ = false;
+    delete ui;
+}
 
-    table_ = new QTableWidget(this);
-    table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    table_->setAlternatingRowColors(true);
-    table_->horizontalHeader()->setStretchLastSection(true);
-    table_->verticalHeader()->setVisible(false);
-    table_->setColumnCount(4);
-    table_->setColumnWidth(0, 200);
-    table_->setColumnWidth(1, 100);
-    table_->setColumnWidth(2, 100);
-    table_->setColumnWidth(3, 100);
-    table_->resize(500, 300);
+void SaveFileDlg::InitUI()
+{
+    ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->tableWidget->setAlternatingRowColors(true);
+    ui->tableWidget->horizontalHeader()->setStretchLastSection(true);
+    ui->tableWidget->verticalHeader()->setVisible(false);
+    ui->tableWidget->setColumnCount(4);
+    ui->tableWidget->setColumnWidth(0, 200);
+    ui->tableWidget->setColumnWidth(1, 150);
+    ui->tableWidget->setColumnWidth(2, 150);
+    ui->tableWidget->setColumnWidth(3, 70);
+
     QStringList header;
     header<<"Sample Name"<<"Analysis Type"<<"Mark Type"<<"User";
-    table_->setHorizontalHeaderLabels(header);
-
-    checkAllBox_ = new QCheckBox("check all", this);
-    checkAllBox_->setChecked(true);
-    saveByDateBox_ = new QCheckBox("save by date", this);
-    saveButton_ = new QPushButton("save", this);
-    exitButton_ = new QPushButton("exit", this);
-    labelButton_ = new QPushButton("ready:",this);
-    progressBar_ = new QProgressBar(this);
-    connect(checkAllBox_, SIGNAL(clicked(bool)), this, SLOT(slotClickCheckAllBox(bool)));
-    connect(saveByDateBox_, SIGNAL(clicked(bool)),this, SLOT(slotClickCheckSaveByDateBox(bool)));
-    connect(saveButton_, SIGNAL(clicked()), this, SLOT(slotClickSaveButton()));
-    connect(exitButton_, SIGNAL(clicked()), this, SLOT(close()));
-    //connect(this, SIGNAL(signalClose()), this, SLOT(close()));
+    ui->tableWidget->setHorizontalHeaderLabels(header);
 }
 
-void SaveFileDlg::slotClickCheckAllBox(bool check)
+void SaveFileDlg::ConnectSignalandSlot()
 {
-    if(check)
+    connect(ui->checkall, &QCheckBox::clicked, this, &SaveFileDlg::slotClickCheckAllBox);
+    connect(ui->savebydate, &QCheckBox::clicked,this, &SaveFileDlg::slotClickCheckSaveByDateBox);
+    connect(ui->btnsave, &QPushButton::clicked, this, &SaveFileDlg::slotClickSaveButton);
+    connect(ui->btnexit, &QPushButton::clicked, this, &SaveFileDlg::close);
+}
+
+void SaveFileDlg::slotClickCheckAllBox(bool ischeck)
+{
+    for(int i=0; i<ui->tableWidget->rowCount(); i++)
     {
-        for(int i=0; i<table_->rowCount(); i++)
-        {
-            table_->item(i, 0)->setCheckState(Qt::Checked);
-        }
-    }
-    else
-    {
-        for(int i=0; i<table_->rowCount(); i++)
-        {
-            table_->item(i, 0)->setCheckState(Qt::Unchecked);
-        }
+        Qt::CheckState state = ischeck ? Qt::Checked : Qt::Unchecked;
+        ui->tableWidget->item(i, 0)->setCheckState(state);
     }
 }
 
-void SaveFileDlg::slotClickCheckSaveByDateBox(bool byDate)
+void SaveFileDlg::slotClickCheckSaveByDateBox(bool ischeck)
 {
-    saveByDate_ = byDate;
+    m_bSaveByDate = ischeck;
 }
 
 void SaveFileDlg::slotClickSaveButton()
 {
-    if(table_->rowCount()==0)
+    int i_row = ui->tableWidget->rowCount();
+    if(i_row > 0)
     {
-        close();
-        return;
-    }
-    QVector<int> index;
-    for(int i=0; i<table_->rowCount();i++)
-    {
-        if(table_->item(i, 0)->checkState()==Qt::Checked)
+        QVector<SampleTreeInfo_t> vec_checked;
+        for(int i=0; i<i_row;i++)
         {
-            index.push_back(i);
+            if(ui->tableWidget->item(i, 0)->checkState() == Qt::Checked)
+            {
+                QString str_name = ui->tableWidget->item(i, 0)->text();
+                vec_checked.push_back(m_map_SampleTreeInfo[str_name]);
+            }
         }
+
+        if(vec_checked.empty())
+        {
+            QMessageBox::warning(this, tr("Soap Typing"), "Please choose sample to save!");
+            return;
+        }
+
+        ui->checkall->setEnabled(false);
+        ui->savebydate->setEnabled(false);
+        ui->btnexit->setEnabled(false);
+        ui->btnsave->setEnabled(false);
+        saveFileT(vec_checked);
+        close();
     }
-    if(index.size()==0)
+}
+
+void SaveFileDlg::saveFileT(QVector<SampleTreeInfo_t> &sampleInfos)
+{
+    ui->status->setText("Waiting:..");
+    ui->progressBar->setRange(0, sampleInfos.size());
+
+    for(int i=0; i<sampleInfos.size(); i++)
     {
-        QMessageBox::warning(this, tr("Soap Typing"), "Please choose sample to save!");
-        return;
+        saveSampleT(m_bSaveByDate,sampleInfos.at(i));
+        ui->progressBar->setValue(i+1);
     }
-    checkAllBox_->setEnabled(false);
-    saveByDateBox_->setEnabled(false);
-    exitButton_->setEnabled(false);
-    saveFileT(index, sampleTreeInfoList_);
-    close();
+
+    ui->status->setText("Ready:");
     return;
 }
 
-void SaveFileDlg::setTableDefaultSample()
+void SaveFileDlg::setTableDefaultData()
 {
-    getSampleTreeDataFromRealTimeDatabase(sampleTreeInfoList_);
-    if(sampleTreeInfoList_.size()<=0)
-        return;
-    int size = sampleTreeInfoList_.size();
-    //    QTableWidgetItem *item = new QTableWidgetItem[size * 4];
-    table_->setRowCount(size);
-    for(int i=0; i<size; i++)
+    SoapTypingDB::GetInstance()->getSampleTreeDataFromSampleTable(m_map_SampleTreeInfo);
+
+    ui->tableWidget->setRowCount(m_map_SampleTreeInfo.size()); //必须设置，且要放置到前面，否则不显示表格内容
+    int i = 0;
+    foreach(const SampleTreeInfo_t& info, m_map_SampleTreeInfo.values())
     {
         QTableWidgetItem *item = new QTableWidgetItem;
-        const SampleTreeInfo& info = sampleTreeInfoList_.at(i);
-        table_->setRowHeight(i, 20);
+
+        ui->tableWidget->setRowHeight(i, 20);
         item->setCheckState(Qt::Checked);
-        item->setIcon(getIcon(info.analysisType, info.markType));
+        item->setIcon(Core::GetInstance()->getIcon(info.analysisType, info.markType));
         item->setText(info.sampleName);
-        table_->setItem(i, 0, item);
+        ui->tableWidget->setItem(i, 0, item);
 
         item = new QTableWidgetItem;
-        item->setText(getAnalysisType(info.analysisType));
-        table_->setItem(i, 1, item);
+        item->setText(Core::GetInstance()->getAnalysisType(info.analysisType));
+        ui->tableWidget->setItem(i, 1, item);
 
         item = new QTableWidgetItem;
-        item->setText(getMarkType(info.markType));
-        table_->setItem(i, 2, item);
+        item->setText(Core::GetInstance()->getMarkType(info.markType));
+        ui->tableWidget->setItem(i, 2, item);
 
         item = new QTableWidgetItem;
         item->setText("default");
-        table_->setItem(i, 3, item);
+        ui->tableWidget->setItem(i, 3, item);
+        i++;
     }
+
 }
 
-void SaveFileDlg::saveFileT(QVector<int> &index, QVector<SampleTreeInfo> &sampleInfos)
+void SaveFileDlg::saveSampleT(bool isBydate, const SampleTreeInfo_t &sampleInfo)
 {
-    QDir dir;
-    dir.mkpath(resultPath);
-    labelButton_->setText("Waiting:..");
-    progressBar_->setRange(0, index.size());
-    if(saveByDate_)
+    QString dirPath;
+    QString str_date("");
+    if (isBydate)
     {
-        QDate date(QDate::currentDate());
-        QString dates = QString("%1%2%3").arg(date.year()).arg(date.month()).arg(date.day());
-        for(int i=0; i<index.size(); i++)
-        {
-            saveSampleTByDate(sampleInfos.at(index.at(i)), dates);
-            progressBar_->setValue(i+1);
-        }
+        str_date = QDate::currentDate().toString("yyyyMMdd");
+        dirPath = QString("%1%2%3_%4").arg(RESULTPATH).arg(QDir::separator()).arg(sampleInfo.sampleName).arg(str_date);
     }
     else
     {
-        for(int i=0; i<index.size(); i++)
+        dirPath = QString("%1%2%3").arg(RESULTPATH).arg(QDir::separator()).arg(sampleInfo.sampleName);
+    }
+
+    QDir dir0;
+    dir0.mkpath(dirPath);
+
+    QString listFileName = QString("%1%2list.txt").arg(dirPath).arg(QDir::separator());
+    QFile file(listFileName);
+    if(file.exists())
+    {
+        file.remove();
+    }
+    file.open(QFile::WriteOnly);
+    QTextStream stream(&file);
+    QString outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(sampleInfo.sampleName);
+    stream<<"AType:"<<sampleInfo.analysisType<<"\n";
+    stream<<"MType:"<<sampleInfo.markType<<"\n";
+    stream<<"sampleTable:"<<outFile<<"\n";
+    SoapTypingDB::GetInstance()->saveSample(sampleInfo.sampleName, outFile, str_date);
+
+    for(int i=0; i<sampleInfo.treeinfo.size(); i++)
+    {
+        const FileTreeInfo_t &fileInfo = sampleInfo.treeinfo.at(i);
+        outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(fileInfo.fileName);
+        if (fileInfo.isGssp)
         {
-            saveSampleT(sampleInfos.at(index.at(i)));
-            progressBar_->setValue(i+1);
+            stream<<"gsspFileTable:"<<outFile<<"\n";
+            SoapTypingDB::GetInstance()->saveFile(fileInfo.isGssp, fileInfo.fileName, outFile, dirPath, str_date);
         }
-    }
-    labelButton_->setText("Ready:");
-    return;
-}
+        else
+        {
+            stream<<"fileTable:"<<outFile<<"\n";
+            SoapTypingDB::GetInstance()->saveFile(fileInfo.isGssp, fileInfo.fileName, outFile, dirPath, str_date);
+        }
 
-
-
-QString getAnalysisType(int type)
-{
-    switch(type)
-    {
-    case 0:
-        return "Match(common)";
-    case 1:
-        return "Match(rare)";
-    case 2:
-        return "Match(bad quality)";
-    case 3:
-        return "Mismatch";
-    default:
-        return "Undefined";
-    }
-    return "Undefined";
-}
-
-QString getMarkType(int type)
-{
-    switch(type)
-    {
-    case 0:
-        return "OWNED";
-    case 1:
-        return "PENDING";
-    case 2:
-        return "REVIEWED";
-    case 3:
-        return "APPROVED";
-    default:
-        return "OWNED";
-    }
-    return "OWNED";
-}
-
-QIcon getIcon(int analysisType, int markType)
-{
-    return QIcon(QString(":/images/filetree%1%2.png").arg(markType).arg(analysisType));
-}
-
-void saveSampleT(const SampleTreeInfo &sampleInfo)
-{
-    QString dirPath = QString("%1%2%3").arg(resultPath).arg(QDir::separator()).arg(sampleInfo.sampleName);
-    QDir dir0(dirPath);
-    if(!dir0.exists())
-    {
-        QDir dir;
-        dir.mkpath(dirPath);
-    }
-    QString listFileName = QString("%1%2list.txt").arg(dirPath).arg(QDir::separator());
-    QFile file(listFileName);
-    if(file.exists())
-    {
-        file.remove();
-    }
-    file.open(QFile::WriteOnly);
-    QTextStream stream(&file);
-    QString outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(sampleInfo.sampleName);
-    stream<<"AType:"<<sampleInfo.analysisType<<"\n";
-    stream<<"MType:"<<sampleInfo.markType<<"\n";
-    stream<<"sampleTable:"<<outFile<<"\n";
-    saveSample(sampleInfo.sampleName.toAscii(), outFile,"");
-
-    for(int i=0; i<sampleInfo.fileTreeInfo.size(); i++)
-    {
-        const FileTreeInfo &fileInfo = sampleInfo.fileTreeInfo.at(i);
-        outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(fileInfo.fileName);
-        stream<<"fileTable:"<<outFile<<"\n";
-        saveFile(fileInfo.fileName.toAscii(), outFile, dirPath, "");
-    }
-
-    for(int i=0; i<sampleInfo.gsspTreeInfo.size(); i++)
-    {
-        const GsspTreeInfo &gsspInfo = sampleInfo.gsspTreeInfo.at(i);
-        outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(gsspInfo.fileName);
-        stream<<"gsspFileTable:"<<outFile<<"\n";
-        saveGssp(gsspInfo.fileName.toAscii(), outFile, dirPath, "");
     }
     file.close();
 }
 
-void saveSampleTByDate(const SampleTreeInfo &sampleInfo, QString date)
-{
-
-    QString dirPath = QString("%1%2%3_%4").arg(resultPath).arg(QDir::separator()).arg(sampleInfo.sampleName.split("_").at(0)).arg(date);
-    if(sampleInfo.sampleName.contains('_'))
-    {
-        QStringList sp = sampleInfo.sampleName.split("_",QString::SkipEmptyParts);
-        QString dirPath = QString("%1%2%3_%4").arg(resultPath).arg(QDir::separator()).arg(sp.at(0)).arg(date);
-    }
-    QDir dir0(dirPath);
-    if(!dir0.exists())
-    {
-        QDir dir;
-        dir.mkpath(dirPath);
-    }
-    QString listFileName = QString("%1%2list.txt").arg(dirPath).arg(QDir::separator());
-    QFile file(listFileName);
-    if(file.exists())
-    {
-        file.remove();
-    }
-    file.open(QFile::WriteOnly);
-    QTextStream stream(&file);
-    QString outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(sampleInfo.sampleName);
-    stream<<"AType:"<<sampleInfo.analysisType<<"\n";
-    stream<<"MType:"<<sampleInfo.markType<<"\n";
-    stream<<"sampleTable:"<<outFile<<"\n";
-    saveSample(sampleInfo.sampleName.toAscii(), outFile, date);
-
-    for(int i=0; i<sampleInfo.fileTreeInfo.size(); i++)
-    {
-        const FileTreeInfo &fileInfo = sampleInfo.fileTreeInfo.at(i);
-        outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(fileInfo.fileName);
-        stream<<"fileTable:"<<outFile<<"\n";
-        saveFile(fileInfo.fileName.toAscii(), outFile, dirPath, date);
-    }
-
-    for(int i=0; i<sampleInfo.gsspTreeInfo.size(); i++)
-    {
-        const GsspTreeInfo &gsspInfo = sampleInfo.gsspTreeInfo.at(i);
-        outFile = QString("%1%2%3.txt").arg(dirPath).arg(QDir::separator()).arg(gsspInfo.fileName);
-        stream<<"gsspFileTable:"<<outFile<<"\n";
-        saveGssp(gsspInfo.fileName.toAscii(), outFile, dirPath, date);
-    }
-    file.close();
-}

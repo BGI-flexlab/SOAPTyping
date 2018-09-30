@@ -1,143 +1,126 @@
 #include "deletefiledlg.h"
-DeleteFileDlg::DeleteFileDlg(bool *isDone, QWidget *parent)
-    :QDialog(parent)
-{
-    setWindowTitle(tr("Delete File"));
-    setWindowFlags(Qt::WindowMaximizeButtonHint);
-    isDone_ = isDone;
-    QVBoxLayout *vLayout = new QVBoxLayout(this);
-    QHBoxLayout *hLayout1 = new QHBoxLayout;
-    QHBoxLayout *hLayout2 = new QHBoxLayout;
-    QSpacerItem *spacer = new QSpacerItem(50, 10, QSizePolicy::Expanding, QSizePolicy::Minimum);
-    setDeleteFileDlgDefault();
-    hLayout1->addWidget(checkAllBox_);
-    hLayout1->addSpacerItem(spacer);
-    hLayout1->addWidget(deleteButton_);
-    hLayout1->addWidget(exitButton_);
+#include "ui_deletefiledlg.h"
+#include "DataBase/soaptypingdb.h"
+#include "Core/core.h"
+#include <QMessageBox>
 
-    hLayout2->addWidget(labelButton_);
-    hLayout2->addWidget(progressBar_);
-    vLayout->addWidget(table_);
-    vLayout->addLayout(hLayout1);
-    vLayout->addLayout(hLayout2);
-    resize(600, 400);
+DeleteFileDlg::DeleteFileDlg(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::DeleteFileDlg)
+{
+    ui->setupUi(this);
+    InitUI();
+    ConnectSignalandSlot();
     setTableDefaultSample();
 }
-void DeleteFileDlg::setDeleteFileDlgDefault()
+
+DeleteFileDlg::~DeleteFileDlg()
 {
-    table_ = new QTableWidget(this);
-    table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    table_->setAlternatingRowColors(true);
-    table_->horizontalHeader()->setStretchLastSection(true);
-    table_->verticalHeader()->setVisible(false);
-    table_->setColumnCount(4);
-    table_->setColumnWidth(0, 200);
-    table_->setColumnWidth(1, 100);
-    table_->setColumnWidth(2, 100);
-    table_->setColumnWidth(3, 100);
-    table_->resize(500, 300);
+    delete ui;
+}
+
+void DeleteFileDlg::InitUI()
+{
+    ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->tableWidget->setAlternatingRowColors(true);
+    ui->tableWidget->horizontalHeader()->setStretchLastSection(true);
+    ui->tableWidget->verticalHeader()->setVisible(false);
+    ui->tableWidget->setColumnCount(4);
+    ui->tableWidget->setColumnWidth(0, 200);
+    ui->tableWidget->setColumnWidth(1, 100);
+    ui->tableWidget->setColumnWidth(2, 100);
+    ui->tableWidget->setColumnWidth(3, 100);
     QStringList header;
     header<<"Sample Name"<<"Analysis Type"<<"Mark Type"<<"User";
-    table_->setHorizontalHeaderLabels(header);
+    ui->tableWidget->setHorizontalHeaderLabels(header);
 
-    checkAllBox_ = new QCheckBox("check all", this);
-    checkAllBox_->setChecked(true);
-    deleteButton_ = new QPushButton("delete", this);
-    exitButton_ = new QPushButton("exit", this);
-    labelButton_ = new QPushButton("ready:",this);
-    progressBar_ = new QProgressBar(this);
-    connect(checkAllBox_, SIGNAL(clicked(bool)), this, SLOT(slotClickCheckAllBox(bool)));
-    connect(deleteButton_, SIGNAL(clicked()), this, SLOT(slotClickDeleteButton()));
-    connect(exitButton_, SIGNAL(clicked()), this, SLOT(close()));
 }
 
-void DeleteFileDlg::slotClickCheckAllBox(bool check)
+void DeleteFileDlg::ConnectSignalandSlot()
 {
-    if(check)
-    {
-        for(int i=0; i<table_->rowCount(); i++)
-        {
-            table_->item(i, 0)->setCheckState(Qt::Checked);
-        }
-    }
-    else
-    {
-        for(int i=0; i<table_->rowCount(); i++)
-        {
-            table_->item(i, 0)->setCheckState(Qt::Unchecked);
-        }
-    }
+    connect(ui->checkBox, &QCheckBox::clicked, this, &DeleteFileDlg::slotClickCheckAllBox);
+    connect(ui->btnDel, &QPushButton::clicked, this, &DeleteFileDlg::slotClickDeleteButton);
+    connect(ui->btnExit, &QPushButton::clicked, this, &DeleteFileDlg::close);
 }
 
+void DeleteFileDlg::slotClickCheckAllBox(bool status)
+{
+    for(int i=0; i<ui->tableWidget->rowCount(); i++)
+    {
+        Qt::CheckState state = status ? Qt::Checked: Qt::Unchecked;
+        ui->tableWidget->item(i, 0)->setCheckState(state);
+    }
+}
 
 void DeleteFileDlg::slotClickDeleteButton()
 {
-    if(table_->rowCount()==0)
+    int i_row = ui->tableWidget->rowCount();
+    if(i_row > 0)
     {
-        close();
-        return;
-    }
-    QVector<int> index;
-    for(int i=0; i<table_->rowCount();i++)
-    {
-        if(table_->item(i, 0)->checkState()==Qt::Checked)
+        QVector<SampleTreeInfo_t> vec_checked;
+        for(int i=0; i<i_row;i++)
         {
-            index.push_back(i);
+            if(ui->tableWidget->item(i, 0)->checkState() == Qt::Checked)
+            {
+                QString str_name = ui->tableWidget->item(i, 0)->text();
+                vec_checked.push_back(m_map_SampleTreeInfo[str_name]);
+            }
         }
+
+        if(vec_checked.empty())
+        {
+            QMessageBox::warning(this, tr("Soap Typing"), "Please choose sample to save!");
+            return;
+        }
+
+        ui->checkBox->setEnabled(false);
+        ui->btnExit->setEnabled(false);
+        ui->btnDel->setEnabled(false);
+        deleteFile(vec_checked);
+        close();
     }
-    if(index.size()==0)
+}
+
+void DeleteFileDlg::deleteFile(QVector<SampleTreeInfo_t> &sampleInfos)
+{
+    ui->btnStatus->setText("Waiting:..");
+    ui->progressBar->setRange(0, sampleInfos.size());
+    for(int i=0; i<sampleInfos.size(); i++)
     {
-        QMessageBox::warning(this, tr("Soap Typing"), "Please choose sample to save!");
-        return;
+        SoapTypingDB::GetInstance()->deleteSample(sampleInfos.at(i).sampleName);
+        ui->progressBar->setValue(i+1);
     }
-    *isDone_ = true;
-    checkAllBox_->setEnabled(false);
-    exitButton_->setEnabled(false);
-    deleteFile(index, sampleTreeInfoList_);
-    close();
+    ui->btnStatus->setText("Ready:");
+    return;
 }
 
 void DeleteFileDlg::setTableDefaultSample()
 {
-    getSampleTreeDataFromRealTimeDatabase(sampleTreeInfoList_);
-    if(sampleTreeInfoList_.size()<=0)
-        return;
-    int size = sampleTreeInfoList_.size();
-    table_->setRowCount(size);
-    for(int i=0; i<size; i++)
+    SoapTypingDB::GetInstance()->getSampleTreeDataFromSampleTable(m_map_SampleTreeInfo);
+
+    ui->tableWidget->setRowCount(m_map_SampleTreeInfo.size());
+    int i = 0;
+    foreach(const SampleTreeInfo_t& info, m_map_SampleTreeInfo.values())
     {
-        const SampleTreeInfo& info = sampleTreeInfoList_.at(i);
-        table_->setRowHeight(i, 20);
+        ui->tableWidget->setRowHeight(i, 20);
         QTableWidgetItem *item = new QTableWidgetItem;
         item->setCheckState(Qt::Checked);
-        item->setIcon(getIcon(info.analysisType, info.markType));
+        item->setIcon(Core::GetInstance()->getIcon(info.analysisType, info.markType));
         item->setText(info.sampleName);
-        table_->setItem(i, 0, item);
+        ui->tableWidget->setItem(i, 0, item);
 
         item = new QTableWidgetItem;
-        item->setText(getAnalysisType(info.analysisType));
-        table_->setItem(i, 1, item);
+        item->setText(Core::GetInstance()->getAnalysisType(info.analysisType));
+        ui->tableWidget->setItem(i, 1, item);
 
         item = new QTableWidgetItem;
-        item->setText(getMarkType(info.markType));
-        table_->setItem(i, 2, item);
+        item->setText(Core::GetInstance()->getMarkType(info.markType));
+        ui->tableWidget->setItem(i, 2, item);
 
         item = new QTableWidgetItem;
         item->setText("default");
-        table_->setItem(i, 3, item);
+        ui->tableWidget->setItem(i, 3, item);
+        i++;
     }
-}
-
-void DeleteFileDlg::deleteFile(QVector<int> &index, QVector<SampleTreeInfo> &sampleInfos)
-{
-    labelButton_->setText("Waiting:..");
-    progressBar_->setRange(0, index.size());
-    for(int i=0; i<index.size(); i++)
-    {
-        deleteSample(sampleInfos.at(index.at(i)).sampleName.toAscii());
-        progressBar_->setValue(i+1);
-    }
-    labelButton_->setText("Ready:");
-    return;
 }
 

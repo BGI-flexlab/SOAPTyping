@@ -1,29 +1,31 @@
 #ifndef DELETEFILEDLG_H
 #define DELETEFILEDLG_H
 
-#include <QtGui>
-#include <QtCore>
-#include "savefiledlg.h"
+#include <QDialog>
+#include "all_base_struct.h"
+
+namespace Ui {
+class DeleteFileDlg;
+}
+
 class DeleteFileDlg : public QDialog
 {
     Q_OBJECT
+
 public:
-    DeleteFileDlg(bool *isDone, QWidget *parent=0);
+    explicit DeleteFileDlg(QWidget *parent = nullptr);
+    ~DeleteFileDlg();
 private:
-    void setDeleteFileDlgDefault();
+    void InitUI();
+    void ConnectSignalandSlot();
     void setTableDefaultSample();
-    void deleteFile(QVector<int> &index, QVector<SampleTreeInfo> &sampleInfos);
+    void deleteFile(QVector<SampleTreeInfo_t> &sampleInfos);
 private slots:
     void slotClickCheckAllBox(bool);
     void slotClickDeleteButton();
 private:
-    bool *isDone_;
-    QCheckBox *checkAllBox_;
-    QPushButton *deleteButton_;
-    QPushButton *exitButton_;
-    QTableWidget *table_;
-    QPushButton *labelButton_;
-    QProgressBar *progressBar_;
-    QVector<SampleTreeInfo> sampleTreeInfoList_;
+    Ui::DeleteFileDlg *ui;
+    QMap<QString,SampleTreeInfo_t> m_map_SampleTreeInfo;
 };
+
 #endif // DELETEFILEDLG_H

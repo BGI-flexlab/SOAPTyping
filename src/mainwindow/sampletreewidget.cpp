@@ -1,204 +1,134 @@
 #include "sampletreewidget.h"
-#include "dialog/savefiledlg.h"
-#include "database/realtimedatabase.h"
-#include "core/analysis.h"
-#include "dialog/usercommentdlg.h"
-#include "core/key_update.h"
+#include <QHeaderView>
+#include "DataBase/soaptypingdb.h"
+#include <QDebug>
+#include <QMenu>
+#include <QClipboard>
+#include <QApplication>
+#include <QMessageBox>
+#include <QContextMenuEvent>
+#include "Dialog/usercommentdlg.h"
+#include "Dialog/savefiledlg.h"
+#include "Core/core.h"
+#include "log/log.h"
+
 SampleTreeWidget::SampleTreeWidget(QWidget *parent)
     :QTreeWidget(parent)
 {
-    Key_Update key;
-    if(!key.AllIsRigth())
-    {
-        return ;
-    }
-    //    setStyleSheet("background-color:auto");
-    onControl = false;
-    sampleTreeInfoList_.clear();
-    //    m_TreeInfoList.clear();
-    setStyle(QStyleFactory::create("Windows")); //新增
-    setSampleTreeWidgetDefault();
-    setSampleTreeWidgetActionAndConnectionDefault();
-    this->setFont(QFont("微软雅黑", 8)); //新增
-    this->setContentsMargins(10,0,0,0); //新增
+    InitUI();
+    CreateRightMenu();
+    ConnectSignalandSlot();
 }
 
-void SampleTreeWidget::setSampleTreeWidgetDefault()
+SampleTreeWidget::~SampleTreeWidget()
+{
+
+}
+
+void SampleTreeWidget::ConnectSignalandSlot()
+{
+    connect(m_pActSaveAndClear, &QAction::triggered, this, &SampleTreeWidget::slotQuickSaveAndClear);
+    connect(m_pActQuickSave, &QAction::triggered, this, &SampleTreeWidget::slotQuickSave);
+    connect(m_pActSaveByDate, &QAction::triggered, this, &SampleTreeWidget::slotSaveByDate);
+    connect(m_pActDelete, &QAction::triggered, this, &SampleTreeWidget::slotDelete);
+
+    connect(m_pActUserComments, &QAction::triggered, this, &SampleTreeWidget::slotUserComments);
+    connect(m_pActDelSelItem, &QAction::triggered, this, &SampleTreeWidget::slotDeleteSelectedItem);
+    connect(m_pActCopy, &QAction::triggered, this, &SampleTreeWidget::slotCopyName);
+
+    connect(m_pActMarkPendingReview, &QAction::triggered, this, &SampleTreeWidget::slotMarkPendingReview);
+    connect(m_pActMarkReviewed, &QAction::triggered, this, &SampleTreeWidget::slotMarkReviewed);
+    connect(m_pActMarkApproved, &QAction::triggered, this, &SampleTreeWidget::slotMarkApproved);
+    connect(m_pActUnlock, &QAction::triggered, this, &SampleTreeWidget::slotUnlock);
+
+    connect(m_pActMarkPendingAndClear, &QAction::triggered, this, &SampleTreeWidget::slotMarkPendingAndClear);
+    connect(m_pActMarkReviewedAndClear, &QAction::triggered, this, &SampleTreeWidget::slotMarkReviewedAndClear);
+    connect(m_pActMarkApprovedAndClear, &QAction::triggered, this, &SampleTreeWidget::slotMarkApprovedAndClear);
+
+}
+
+void SampleTreeWidget::InitUI()
 {
     setColumnCount(3);
-    header()->hide();
-    setSelectionBehavior(QAbstractItemView::SelectRows); //改，SelectItems->SelectRows
+    setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
-    //    setSelectionMode(QAbstractItemView::SingleSelection);
-    header()->setResizeMode(QHeaderView::ResizeToContents);
+    header()->hide();
+    header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     header()->setStretchLastSection(false);
-    oldItem_ = NULL;
-    oldColumn_ = 0;
+    //setStyleSheet("QTreeView::branch {image:none;}");
+    setIconSize(QSize(20,20));
 }
 
-void SampleTreeWidget::setSampleTreeWidgetActionAndConnectionDefault()
+void SampleTreeWidget::CreateRightMenu()
 {
-    rightMenu = new QMenu(this);
-    actionQuickSaveAndClear = new QAction("Quick Save And Clear", this);
-    actionQuickSave = new QAction("Quick Save", this);
-    actionSaveByDate = new QAction("Save By Date", this);
-    actionDelete = new QAction("Delete", this);
-    //    actionShowGSSPZCode = new QAction("Show GSSP Z Code", this);
-    actionUserComments = new QAction("User Comments", this);
-    //    actionSetFinalType = new QAction("Set Final Type", this);
-    actionDeleteSelectedItem = new QAction("Delete Selected", this);
-    actionMarkPendingReview = new QAction("Mark Pending Review", this);
-    actionMarkReviewed = new QAction("Mark Reviewed", this);
-    actionMarkApproved = new QAction("Mark Approved", this);
-    actionUnlock = new QAction("Unlock", this);
-    actionMarkPendingAndClear = new QAction("Mark Pending And Clear", this);
-    actionMarkReviewedAndClear = new QAction("Mark Reviewed And Clear", this);
-    actionMarkApprovedAndClear = new QAction("Mark Approved And Clear", this);
-    action_copy = new QAction("Copy Name(Ctrl+C)", this);
+    m_pRightMenu = new QMenu(this);
+    m_pActSaveAndClear = new QAction("Quick Save And Clear", this);
+    m_pActQuickSave = new QAction("Quick Save", this);
+    m_pActSaveByDate = new QAction("Save By Date", this);
+    m_pActDelete = new QAction("Delete", this);
 
-    rightMenu->addAction(actionQuickSaveAndClear);
-    rightMenu->addAction(actionQuickSave);
-    rightMenu->addAction(actionSaveByDate);
-    rightMenu->addAction(actionDelete);
-    rightMenu->addSeparator();
-    //    rightMenu->addAction(actionShowGSSPZCode);
-    rightMenu->addAction(actionUserComments);
-    rightMenu->addAction(actionDeleteSelectedItem);
-    rightMenu->addAction(action_copy);
-    //    rightMenu->addAction(actionSetFinalType);
-    rightMenu->addSeparator();
-    rightMenu->addAction(actionMarkPendingReview);
-    rightMenu->addAction(actionMarkReviewed);
-    rightMenu->addAction(actionMarkApproved);
-    rightMenu->addAction(actionUnlock);
-    rightMenu->addSeparator();
-    rightMenu->addAction(actionMarkPendingAndClear);
-    rightMenu->addAction(actionMarkReviewedAndClear);
-    rightMenu->addAction(actionMarkApprovedAndClear);
+    m_pActUserComments = new QAction("User Comments", this);
+    m_pActDelSelItem = new QAction("Delete Selected", this);
+    m_pActCopy = new QAction("Copy Name(Ctrl+C)", this);
 
-    connect(actionQuickSaveAndClear, SIGNAL(triggered()), this, SLOT(slotQuickSaveAndClear()));
-    connect(actionQuickSave, SIGNAL(triggered()), this, SLOT(slotQuickSave()));
-    connect(actionSaveByDate, SIGNAL(triggered()), this, SLOT(slotSaveByDate()));
-    connect(actionDelete, SIGNAL(triggered()), this, SLOT(slotDelete()));
-    //    connect(actionShowGSSPZCode, SIGNAL(triggered()), this, SLOT(slotShowGSSPZCode()));
-    connect(actionUserComments, SIGNAL(triggered()), this, SLOT(slotUserComments()));
-    //    connect(actionSetFinalType, SIGNAL(triggered()), this, SLOT(slotSetFinalType()));
-    connect(actionDeleteSelectedItem, SIGNAL(triggered()), this, SLOT(slotDeleteSelectedItem()));
-    connect(actionMarkPendingReview, SIGNAL(triggered()), this, SLOT(slotMarkPendingReview()));
-    connect(actionMarkReviewed, SIGNAL(triggered()), this, SLOT(slotMarkReviewed()));
-    connect(actionMarkApproved, SIGNAL(triggered()), this, SLOT(slotMarkApproved()));
-    connect(actionUnlock, SIGNAL(triggered()), this, SLOT(slotUnlock()));
-    connect(actionMarkPendingAndClear, SIGNAL(triggered()), this, SLOT(slotMarkPendingAndClear()));
-    connect(actionMarkReviewedAndClear, SIGNAL(triggered()), this, SLOT(slotMarkReviewedAndClear()));
-    connect(actionMarkApprovedAndClear, SIGNAL(triggered()), this, SLOT(slotMarkApprovedAndClear()));
-    connect(action_copy, SIGNAL(triggered()), this, SLOT(slotCopyName()));
-    connect(this, SIGNAL(itemClicked(QTreeWidgetItem*,int)), this, SLOT(slotItemChanged(QTreeWidgetItem*, int)));
+    m_pActMarkPendingReview = new QAction("Mark Pending Review", this);
+    m_pActMarkReviewed = new QAction("Mark Reviewed", this);
+    m_pActMarkApproved = new QAction("Mark Approved", this);
+    m_pActUnlock = new QAction("Unlock", this);
+
+    m_pActMarkPendingAndClear = new QAction("Mark Pending And Clear", this);
+    m_pActMarkReviewedAndClear = new QAction("Mark Reviewed And Clear", this);
+    m_pActMarkApprovedAndClear = new QAction("Mark Approved And Clear", this);
+
+
+    m_pRightMenu->addAction(m_pActSaveAndClear);
+    m_pRightMenu->addAction(m_pActQuickSave);
+    m_pRightMenu->addAction(m_pActSaveByDate);
+    m_pRightMenu->addAction(m_pActDelete);
+    m_pRightMenu->addSeparator();
+
+    m_pRightMenu->addAction(m_pActUserComments);
+    m_pRightMenu->addAction(m_pActDelSelItem);
+    m_pRightMenu->addAction(m_pActCopy);
+    m_pRightMenu->addSeparator();
+
+    m_pRightMenu->addAction(m_pActMarkPendingReview);
+    m_pRightMenu->addAction(m_pActMarkReviewed);
+    m_pRightMenu->addAction(m_pActMarkApproved);
+    m_pRightMenu->addAction(m_pActUnlock);
+    m_pRightMenu->addSeparator();
+
+    m_pRightMenu->addAction(m_pActMarkPendingAndClear);
+    m_pRightMenu->addAction(m_pActMarkReviewedAndClear);
+    m_pRightMenu->addAction(m_pActMarkApprovedAndClear);
 }
 
-void SampleTreeWidget::contextMenuEvent(QContextMenuEvent *event)
+void SampleTreeWidget::SetTreeData()
 {
-    QTreeWidgetItem *item0 = NULL;
-    item0 = this->itemAt(event->pos());
-    if(item0 == NULL)
+    clear();
+    m_map_SampleTreeInfo.clear();
+    SoapTypingDB::GetInstance()->getSampleTreeDataFromSampleTable(m_map_SampleTreeInfo);
+    if(m_map_SampleTreeInfo.isEmpty())
     {
+        LOG_DEBUG("%s","no tree data");
+        emit signalClearAll();
         return;
     }
-    rightMenu->exec(QCursor::pos());
-    event->accept();
-}
 
-
-void SampleTreeWidget::setData(QVector<SampleTreeInfo> &sampleTreeInfoList)
-{
-    this->clear();
-    QBrush brush;
-    brush.setColor(Qt::blue);
-    int sampleSize = sampleTreeInfoList.size();
-    setIconSize(QSize(20,20)); //新增
-    for(int i=0; i<sampleSize; i++)
-    {
-        const SampleTreeInfo &sampleTreeInfo = sampleTreeInfoList.at(i);
-        QTreeWidgetItem *top = new QTreeWidgetItem;
-        top->setText(0, sampleTreeInfo.sampleName);
-        top->setText(1, sampleTreeInfo.geneName);
-        //        top->setBackgroundColor(1, Qt::cyan);
-        top->setForeground(1, brush);
-        top->setIcon(0, getIcon(sampleTreeInfo.analysisType, sampleTreeInfo.markType));
-        top->setSizeHint(0,QSize(200,20));//新增
-        int fileSize=sampleTreeInfo.fileTreeInfo.size();
-        for(int j=0; j<fileSize; j++)
-        {
-            const FileTreeInfo &fileTreeInfo = sampleTreeInfo.fileTreeInfo.at(j);
-            QTreeWidgetItem *child = new QTreeWidgetItem;
-            child->setText(0, fileTreeInfo.fileName);
-            child->setSizeHint(0,QSize(300,20));//新增
-            if(fileTreeInfo.analysisType == 1)
-            {
-                child->setText(1, "UN");
-                child->setIcon(0, QIcon(":/images/filetreeFile2.png"));
-            }
-            else
-            {
-                child->setText(1, QString("%1%2").arg(fileTreeInfo.exonIndex).arg(fileTreeInfo.rOrF));
-                child->setIcon(0, QIcon(QString(":/images/filetreeFile%1.png").arg(fileTreeInfo.isGood)));
-            }
-            top->addChild(child);
-        }
-        int gsspSize = sampleTreeInfo.gsspTreeInfo.size();
-        for(int j=0; j<gsspSize; j++)
-        {
-            const GsspTreeInfo &gsspTreeInfo = sampleTreeInfo.gsspTreeInfo.at(j);
-            QTreeWidgetItem *child = new QTreeWidgetItem;
-            child->setText(0, gsspTreeInfo.fileName);
-            if(gsspTreeInfo.analysisType == 4) //UNMATCH
-            {
-                child->setText(1, "UN");
-                child->setText(2, QString("Filter:%1").arg(gsspTreeInfo.gsspName));
-                child->setIcon(0, QIcon(":/images/filetreeFile2.png"));
-            }
-            else
-            {
-                //改，删                child->setText(1, QString("%1%2").arg(gsspTreeInfo.exonIndex).arg(gsspTreeInfo.rOrF));
-                child->setText(1, QString("Filter:%1").arg(gsspTreeInfo.gsspName));
-                child->setIcon(0, getIcon(gsspTreeInfo.analysisType, 0));
-            }
-            top->addChild(child);
-        }
-        if(gsspSize > 1)
-        {
-            QTreeWidgetItem *child = new QTreeWidgetItem;
-            child->setText(0, "Combined");
-            child->setIcon(0, getIcon(sampleTreeInfo.analysisType, 0));
-            top->addChild(child);
-        }
-        addTopLevelItem(top);
-    }
-    oldColumn_ = 0;
-    oldItem_ = NULL;
-}
-
-//新增
-void SampleTreeWidget::setData(QVector<SampleTreeInfo_t> &sampleTreeInfoList)
-{
-    this->clear();
-    QBrush brush;
-    brush.setColor(Qt::blue);
-    int sampleSize = sampleTreeInfoList.size();
-    setIconSize(QSize(20,20));
-    for(int i=0; i<sampleSize; i++)
+    LOG_DEBUG("%d",m_map_SampleTreeInfo.size());
+    foreach(const SampleTreeInfo_t &sampleTreeInfo, m_map_SampleTreeInfo.values())
     {
         int gsspSize = 0;
-        const SampleTreeInfo_t &sampleTreeInfo = sampleTreeInfoList.at(i);
         QTreeWidgetItem *top = new QTreeWidgetItem;
         top->setText(0, sampleTreeInfo.sampleName);
         top->setText(1, sampleTreeInfo.geneName);
-        top->setForeground(1, brush);
-        top->setIcon(0, getIcon(sampleTreeInfo.analysisType, sampleTreeInfo.markType));
+        //top->setForeground(1, brush);
+        top->setIcon(0, Core::GetInstance()->getIcon(sampleTreeInfo.analysisType, sampleTreeInfo.markType));
         top->setSizeHint(0,QSize(200,15));
         int treeSize=sampleTreeInfo.treeinfo.size();
         for(int j=0; j<treeSize; j++)
         {
-            const TreeInfo_t &fileTreeInfo = sampleTreeInfo.treeinfo.at(j);
+            const FileTreeInfo_t &fileTreeInfo = sampleTreeInfo.treeinfo.at(j);
             QTreeWidgetItem *child = new QTreeWidgetItem;
             child->setText(0, fileTreeInfo.fileName);
             child->setSizeHint(0,QSize(350,25));
@@ -207,27 +137,26 @@ void SampleTreeWidget::setData(QVector<SampleTreeInfo_t> &sampleTreeInfoList)
                 if(fileTreeInfo.analysisType == 1)
                 {
                     child->setText(1, "UN");
-                    child->setIcon(0, QIcon(":/images/filetreeFile2.png"));
+                    child->setIcon(0, QIcon(":/png/images/filetreeFile2.png"));
                 }
                 else
                 {
                     child->setText(1, QString("%1%2").arg(fileTreeInfo.exonIndex).arg(fileTreeInfo.rOrF));
-                    child->setIcon(0, QIcon(QString(":/images/filetreeFile%1.png").arg(fileTreeInfo.isGood)));
+                    child->setIcon(0, QIcon(QString(":/png/images/filetreeFile%1.png").arg(fileTreeInfo.isGood)));
                 }
             }
             else
             {
+                child->setData(0,Qt::UserRole,fileTreeInfo.exonIndex);
                 if(fileTreeInfo.analysisType == 4) //UNMATCH
                 {
-                    //                    child->setText(1, "UN");
                     child->setText(1, QString("Filter:%1").arg(fileTreeInfo.gsspName));//2
-                    child->setIcon(0, QIcon(":/images/filetreeFile2.png"));
+                    child->setIcon(0, QIcon(":/png/images/filetreeFile2.png"));
                 }
                 else
                 {
-                    //                    child->setText(1, QString("%1%2").arg(fileTreeInfo.exonIndex).arg(fileTreeInfo.rOrF));
                     child->setText(1, QString("Filter:%1").arg(fileTreeInfo.gsspName));//2
-                    child->setIcon(0, getIcon(fileTreeInfo.analysisType, 0));
+                    child->setIcon(0, Core::GetInstance()->getIcon(fileTreeInfo.analysisType, 0));
                 }
                 gsspSize++;
             }
@@ -237,354 +166,121 @@ void SampleTreeWidget::setData(QVector<SampleTreeInfo_t> &sampleTreeInfoList)
         {
             QTreeWidgetItem *child = new QTreeWidgetItem;
             child->setText(0, "Combined");
-            child->setIcon(0, getIcon(sampleTreeInfo.analysisType, 0));
+            child->setIcon(0, Core::GetInstance()->getIcon(sampleTreeInfo.analysisType, 0));
             top->addChild(child);
         }
         addTopLevelItem(top);
     }
-    oldColumn_ = 0;
-    oldItem_ = NULL;
+    topLevelItem(0)->setSelected(true);
+    expandItem(topLevelItem(0));
+    setCurrentItem(topLevelItem(0)->child(0));
+    emit itemClicked(topLevelItem(0)->child(0), 0);
 }
-//新增
-QVector<SampleTreeInfo_t> SampleTreeWidget::sortData(QVector<SampleTreeInfo> sampleTreeInfoList)
+
+void SampleTreeWidget::SetSelectItem(int index, const QString &str_sample)
 {
-    QVector<SampleTreeInfo_t> returndata;
-    int sampleSize = sampleTreeInfoList.size();
-    for(int i = 0;i < sampleSize;i++)
+    for(int i=0;i<topLevelItemCount();i++)
     {
-        SampleTreeInfo_t tmpSampleTreeInfo;
-        SampleTreeInfo sampleTreeInfo  = sampleTreeInfoList.at(i);
-        tmpSampleTreeInfo.analysisType = sampleTreeInfo.analysisType;
-        tmpSampleTreeInfo.geneName     = sampleTreeInfo.geneName;
-        tmpSampleTreeInfo.markType     = sampleTreeInfo.markType;
-        tmpSampleTreeInfo.sampleName   = sampleTreeInfo.sampleName;
-        int fileSize = sampleTreeInfo.fileTreeInfo.size();
-        int GsspSize = sampleTreeInfo.gsspTreeInfo.size();
-        for(int j = 0;j < fileSize;j++)
+        QString str_name = topLevelItem(i)->text(0);
+        if(str_name == str_sample)
         {
-            TreeInfo_t tmpTreeInfo;
-            tmpTreeInfo.analysisType = sampleTreeInfo.fileTreeInfo[j].analysisType;
-            tmpTreeInfo.exonIndex    = sampleTreeInfo.fileTreeInfo[j].exonIndex;
-            tmpTreeInfo.fileName     = sampleTreeInfo.fileTreeInfo[j].fileName;
-            tmpTreeInfo.isGood       = sampleTreeInfo.fileTreeInfo[j].isGood;
-            tmpTreeInfo.rOrF         = sampleTreeInfo.fileTreeInfo[j].rOrF;
-            tmpTreeInfo.isGssp       = false;
-            tmpTreeInfo.gsspName     = "";
-            tmpSampleTreeInfo.treeinfo.append(tmpTreeInfo);
-        }
-        for(int j = 0;j < GsspSize;j++)
-        {
-            TreeInfo_t tmpTreeInfo;
-            tmpTreeInfo.analysisType = sampleTreeInfo.gsspTreeInfo[j].analysisType;
-            tmpTreeInfo.exonIndex    = sampleTreeInfo.gsspTreeInfo[j].exonIndex;
-            tmpTreeInfo.fileName     = sampleTreeInfo.gsspTreeInfo[j].fileName;
-            tmpTreeInfo.isGood       = sampleTreeInfo.gsspTreeInfo[j].isGood;
-            tmpTreeInfo.rOrF         = sampleTreeInfo.gsspTreeInfo[j].rOrF;
-            tmpTreeInfo.gsspName     = sampleTreeInfo.gsspTreeInfo[j].gsspName;
-            tmpTreeInfo.isGssp       = true;
-            /*由于样品峰图和Gssp峰图原本就是排序好的，所以一次插入排序即可将GSSP文件插入到适当的位置*/
-            bool flag = true;
-            for(int u=0; u<tmpSampleTreeInfo.treeinfo.size(); u++){
-                if(tmpSampleTreeInfo.treeinfo[u].exonIndex>tmpTreeInfo.exonIndex){
-                    tmpSampleTreeInfo.treeinfo.insert(u, tmpTreeInfo);
-                    flag = false;
+            for(int j = 0;j<topLevelItem(i)->childCount();j++)
+            {
+                QTreeWidgetItem *item = topLevelItem(i)->child(j);
+                if(item->text(1).contains(QString::number(index)))
+                {
+                    setCurrentItem(item);
                     break;
                 }
             }
-            if(flag){
-                tmpSampleTreeInfo.treeinfo.append(tmpTreeInfo);
-            }
+            break;
         }
-
-
-//        for(int j = 0;j < treeSize;j++)
-//        {
-//            TreeInfo_t tmpTreeInfo;
-//            //            for(int u = 0;u < treeSize - 1 - j;u++)
-//            //            {
-//            //                if(tmpSampleTreeInfo.treeinfo[u].exonIndex > tmpSampleTreeInfo.treeinfo[u+1].exonIndex)
-//            //                {
-//            //                    tmpTreeInfo = tmpSampleTreeInfo.treeinfo[u];
-//            //                    tmpSampleTreeInfo.treeinfo[u]   = tmpSampleTreeInfo.treeinfo[u+1];
-//            //                    tmpSampleTreeInfo.treeinfo[u+1] = tmpTreeInfo;
-//            //                }
-//            //            }
-//            for(int u = j+1;u<treeSize;u++)
-//            {
-//                if(tmpSampleTreeInfo.treeinfo[j].exonIndex > tmpSampleTreeInfo.treeinfo[u].exonIndex)
-//                {
-//                    tmpTreeInfo = tmpSampleTreeInfo.treeinfo[j];
-//                    tmpSampleTreeInfo.treeinfo[j] = tmpSampleTreeInfo.treeinfo[u];
-//                    tmpSampleTreeInfo.treeinfo[u] = tmpTreeInfo;
-//                }
-//            }
-//        }
-//        for(int j=0; j<treeSize - 1; j++)
-//        {
-//            TreeInfo_t tmpTreeInfo;
-//            if(tmpSampleTreeInfo.treeinfo[j].exonIndex == tmpSampleTreeInfo.treeinfo[j+1].exonIndex)
-//            {
-//                if(tmpSampleTreeInfo.treeinfo[j].rOrF.toAscii() > tmpSampleTreeInfo.treeinfo[j+1].rOrF.toAscii())
-//                {
-//                    tmpTreeInfo = tmpSampleTreeInfo.treeinfo[j];
-//                    tmpSampleTreeInfo.treeinfo[j] = tmpSampleTreeInfo.treeinfo[j+1];
-//                    tmpSampleTreeInfo.treeinfo[j+1] = tmpTreeInfo;
-//                }
-//            }
-//        }
-//        for(int j=0; j<treeSize - 1; j++)
-//        {
-//            TreeInfo_t tmpTreeInfo;
-//            if(tmpSampleTreeInfo.treeinfo[j].exonIndex == tmpSampleTreeInfo.treeinfo[j+1].exonIndex)
-//            {
-//                if(tmpSampleTreeInfo.treeinfo[j].isGssp)
-//                {
-//                    tmpTreeInfo = tmpSampleTreeInfo.treeinfo[j];
-//                    tmpSampleTreeInfo.treeinfo[j] = tmpSampleTreeInfo.treeinfo[j+1];
-//                    tmpSampleTreeInfo.treeinfo[j+1] = tmpTreeInfo;
-//                }
-//            }
-//        }
-        returndata.append(tmpSampleTreeInfo);
     }
-    return returndata;
-}
-
-QIcon SampleTreeWidget::getIcon(int analysisType, int markType)
-{
-    return QIcon(QString(":/images/filetree%1%2.png").arg(markType).arg(analysisType));
 }
 
 void SampleTreeWidget::markSampleType(int markType)
 {
-    int mark = getMarkTypeBySampleName(signalInfo_.sampleName.toAscii());
-    int analysis = getAnalysisTypeBySampleName(signalInfo_.sampleName.toAscii());
+    QTreeWidgetItem *item = m_pSelByRightItem;
+    QString str_sample = item->text(0).split('_').at(0);
+    int mark,analysis;
+    SoapTypingDB::GetInstance()->getMarkTypeAndAnalysisFromSampleTable(str_sample, mark, analysis);
     if(mark==APPROVED && markType!=OWNED)
     {
         QMessageBox::warning(this, tr("Soap Typing"),tr("Please unlock the sample as it was marked approved"));
         return;
     }
-    setMarkTypeBySampleName(signalInfo_.sampleName.toAscii(), markType);
-    int topIndex = getSampleIndex(signalInfo_.sampleName);
-    sampleTreeInfoList_[topIndex].markType = markType;
-    QTreeWidgetItem *itm = currentItem();
-    if(itm->parent()!=NULL)
-        itm=itm->parent();
-    itm->setIcon(0, getIcon(analysis, markType));
+    SoapTypingDB::GetInstance()->setMarkTypeBySampleName(str_sample, markType);
+
+    m_map_SampleTreeInfo[str_sample].markType = markType;
+
+    if(item->parent()!=nullptr)
+    {
+        item = item->parent();
+    }
+    item->setIcon(0, Core::GetInstance()->getIcon(analysis, markType));
 }
 
-void SampleTreeWidget::expandSample(int type)
+void SampleTreeWidget::markSampleTypeAndClear(int markType)
 {
-    int topIndex = getSampleIndex(signalInfo_.sampleName);
-    if(topIndex==-1)
+    QTreeWidgetItem *item = m_pSelByRightItem;
+    QString str_sample = item->text(0).split('_').at(0);
+    int mark,analysis;
+    SoapTypingDB::GetInstance()->getMarkTypeAndAnalysisFromSampleTable(str_sample, mark, analysis);
+    if(mark==APPROVED && markType!=OWNED)
     {
-        signalInfo_.sampleName="";
-        emit signalFileChnaged(signalInfo_, 1);
+        QMessageBox::warning(this, tr("Soap Typing"),tr("Please unlock the sample as it was marked approved"));
         return;
     }
-    topLevelItem(topIndex)->setSelected(true);
-    expandItem(topLevelItem(topIndex));
-    int childIndex = getFileIndex(signalInfo_.fileName, topIndex);
-    emitFileChangedSignal(topIndex, childIndex, type);
+    SoapTypingDB::GetInstance()->setMarkTypeBySampleName(str_sample, markType);
+
+    m_map_SampleTreeInfo[str_sample].markType = markType;
+
+    slotQuickSaveAndClear();
 }
 
-int SampleTreeWidget::getSampleIndex(const QString &sampleName)
+void SampleTreeWidget::contextMenuEvent(QContextMenuEvent *event)
 {
-    if(topLevelItemCount()<=0)
-        return -1;
-    for(int i=0; i<topLevelItemCount(); i++)
+    m_pSelByRightItem = this->itemAt(event->pos());
+    if(m_pSelByRightItem != nullptr)
     {
-        if(topLevelItem(i)->text(0)==sampleName)
-            return i;
+        m_pRightMenu->exec(QCursor::pos());
+        event->accept();
     }
-    return 0;
-}
-
-int SampleTreeWidget::getFileIndex(const QString &fileName, int sampleIndex)
-{
-    if(fileName.isEmpty())
-        return 0;
-    for(int i=0; i<topLevelItem(sampleIndex)->childCount(); i++)
-    {
-        if(topLevelItem(sampleIndex)->child(i)->text(0)==fileName)
-        {
-            topLevelItem(sampleIndex)->child(i)->setSelected(true);
-            return i;
-        }
-    }
-    topLevelItem(sampleIndex)->child(0)->setSelected(true);
-    return 0;
-}
-
-void SampleTreeWidget::emitFileChangedSignal(int topIndex, int childIndex, int type)
-{
-    QTreeWidgetItem *item0 = topLevelItem(topIndex)->child(childIndex);
-    if(item0->text(1).contains("UN"))
-    {
-        signalInfo_.isUndefined = true;
-    }
-    else
-    {
-        signalInfo_.isUndefined = false;
-    }
-    if(item0->text(0).contains("Combined"))
-    {
-        signalInfo_.isCombined = true;
-    }
-    else
-    {
-        signalInfo_.isCombined = false;
-    }
-    if(item0->text(1).contains("Filter")) //改2->1
-    {
-        signalInfo_.isGssp = true;
-    }
-    else
-    {
-        signalInfo_.isGssp = false;
-    }
-    if(oldColumn_ == 1) //改2->1
-    {
-        signalInfo_.isGsspFilter = true;
-    }
-    else
-    {
-        signalInfo_.isGsspFilter = false;
-    }
-    //    const SampleTreeInfo &sampleTreeInfo = m_TreeInfoList.at(topIndex);
-    //    signalInfo_.sampleName = sampleTreeInfo.sampleName;
-    //    signalInfo_.geneName = sampleTreeInfo.geneName;
-    //    if(childIndex < sampleTreeInfo.fileTreeInfo.size())
-    //    {
-    //        const FileTreeInfo &fileTreeInfo = sampleTreeInfo.fileTreeInfo.at(childIndex);
-    //        signalInfo_.fileName = fileTreeInfo.fileName;
-    //        signalInfo_.exonIndex = fileTreeInfo.exonIndex;
-    //        signalInfo_.rOrF = fileTreeInfo.rOrF;
-    //    }
-    //    else
-    //    {
-    //        childIndex = childIndex - sampleTreeInfo.fileTreeInfo.size();
-    //        if(signalInfo_.isCombined)
-    //            childIndex = 0;
-    //        const GsspTreeInfo &gsspTreeInfo = sampleTreeInfo.gsspTreeInfo.at(childIndex);
-    //        signalInfo_.fileName = gsspTreeInfo.fileName;
-    //        signalInfo_.exonIndex = gsspTreeInfo.exonIndex;
-    //        signalInfo_.rOrF = gsspTreeInfo.rOrF;
-    //    }
-    //    emit signalFileChnaged(signalInfo_, type);
-    //    emit signalGeneName(sampleTreeInfo.geneName);
-
-    const SampleTreeInfo_t &sampleTreeInfo = m_TreeInfoList.at(topIndex);
-    signalInfo_.sampleName = sampleTreeInfo.sampleName;
-    signalInfo_.geneName = sampleTreeInfo.geneName;
-    //改，动较大
-    if(signalInfo_.isCombined)
-        childIndex = 0;
-    const TreeInfo_t &fileTreeInfo = sampleTreeInfo.treeinfo.at(childIndex);
-    signalInfo_.fileName = fileTreeInfo.fileName;
-    signalInfo_.exonIndex = fileTreeInfo.exonIndex;
-    signalInfo_.rOrF = fileTreeInfo.rOrF;
-    emit signalFileChnaged(signalInfo_, type);
-    emit signalGeneName(sampleTreeInfo.geneName); //新增
-}
-
-void SampleTreeWidget::slotFileChanged(SignalInfo &signalInfo, int type)
-{
-    clearSelection();
-    if(type!=0)
-    {
-        signalInfo_ = signalInfo;
-        sampleTreeInfoList_.clear();
-        m_TreeInfoList.clear(); //新增
-        getSampleTreeDataFromRealTimeDatabase(sampleTreeInfoList_);
-        m_TreeInfoList = sortData(sampleTreeInfoList_); //新增
-        setData(m_TreeInfoList);
-        expandSample(type);
-    }
-    else
-    {
-        int topIndex = getSampleIndex(signalInfo.sampleName);
-        if(topIndex==-1)
-        {
-            return;
-        }
-        topLevelItem(topIndex)->setSelected(true);
-        expandItem(topLevelItem(topIndex));
-        int childIndex = getFileIndex(signalInfo.fileName, topIndex);
-    }
-}
-
-void SampleTreeWidget::slotItemChanged(QTreeWidgetItem *item0, int col)
-{
-    if(onControl)
-        return;
-
-    //改    if(col == 1 || item0->text(2).isEmpty())
-    //    {
-    //        col = 0;//样品名, 和不含有filter的行, 重复点击无效.
-    //    }
-    if(col == 0||!item0->text(1).contains("Filter"))
-    {
-        col = 0;//样品名, 和不含有filter的行, 重复点击无效.
-    }
-    if(item0 == oldItem_ && col == oldColumn_)
-    {
-        return; //样品名, 和不含有filter的行, 重复点击无效.
-    }
-    oldItem_ = item0;
-    oldColumn_ = col;
-    if(item0->parent() == NULL)
-    {
-        item0 = item0->child(0);
-    }
-    int topIndex = indexOfTopLevelItem(item0->parent());
-    int childIndex = item0->parent()->indexOfChild(item0);
-    emitFileChangedSignal(topIndex, childIndex, 0);
 }
 
 void SampleTreeWidget::slotQuickSaveAndClear()
 {
+    QString str_sample = m_pSelByRightItem->text(0).split('_').at(0);
     slotQuickSave();
-    deleteSample(signalInfo_.sampleName.toAscii());
-    slotFileChanged(signalInfo_, 1);
+    SoapTypingDB::GetInstance()->deleteSample(str_sample);
+    SetTreeData();
 }
 
 void SampleTreeWidget::slotQuickSave()
 {
-    int topIndex = getSampleIndex(signalInfo_.sampleName);
-    if(topIndex != -1)
-    {
-        saveSampleT(sampleTreeInfoList_.at(topIndex));
-    }
-    else
-    {
-        QMessageBox::warning(this, tr("Soap Typing"), tr("Sample info error when save!"));
-    }
+    QString str_sample = m_pSelByRightItem->text(0).split('_').at(0);
+
+    SaveFileDlg::saveSampleT(false, m_map_SampleTreeInfo[str_sample]);
 }
 
 void SampleTreeWidget::slotSaveByDate()
 {
-    int topIndex = getSampleIndex(signalInfo_.sampleName);
-    if(topIndex != -1)
-    {
-        QDate date(QDate::currentDate());
-        QString dates = QString("%1%2%3").arg(date.year()).arg(date.month()).arg(date.day());
-        saveSampleTByDate(sampleTreeInfoList_.at(topIndex), dates);
-    }
-    else
-    {
-        QMessageBox::warning(this, tr("Soap Typing"), tr("Sample info error when save by date!"));
-    }
+    QString str_sample = m_pSelByRightItem->text(0).split('_').at(0);
+
+    SaveFileDlg::saveSampleT(true, m_map_SampleTreeInfo[str_sample]);
 }
 
 void SampleTreeWidget::slotDelete()
 {
-    QTreeWidgetItem *itemN = this->currentItem();
+    QTreeWidgetItem *itemN = m_pSelByRightItem;
     if(itemN->text(0).contains("Combined"))
-        return;
+    {
+       return;
+    }
+
     QString info;
     bool deleteSamples = false;
-    if(itemN->parent()==NULL)
+    if(itemN->parent() == nullptr)
     {
         deleteSamples = true;
         info.append(QString("Would you like to delete the sample:\n%1").arg(itemN->text(0)));
@@ -603,14 +299,42 @@ void SampleTreeWidget::slotDelete()
     case QMessageBox::Yes:
         if(deleteSamples)
         {
-            deleteSample(itemN->text(0).toAscii());
+            SoapTypingDB::GetInstance()->deleteSample(itemN->text(0));
+            QVector<QString> vec_sample;
+            vec_sample.push_back(itemN->text(0));
+            emit signalChangeDBByFile(vec_sample);
         }
         else
         {
-            deleteFile(itemN->text(0).toAscii()); //包括删除样品名.
-            analysisSample(signalInfo_.sampleName.toAscii());
+            QString str_type = m_pSelByRightItem->text(1);
+            if (str_type.contains("Filter")) //gssp文件
+            {
+                SoapTypingDB::GetInstance()->deleteFile(true, itemN->text(0));
+            }
+            else
+            {
+                SoapTypingDB::GetInstance()->deleteFile(false, itemN->text(0));
+            }
+
+            QTreeWidgetItem *pParent = m_pSelByRightItem->parent();
+            int count = pParent->childCount() -1;
+            for(int i=0;i<pParent->childCount();i++)
+            {
+                QTreeWidgetItem *pitem = pParent->child(i);
+                if(pitem->text(0).contains("Combined"))
+                {
+                    count--;
+                }
+            }
+            if(count == 0)
+            {
+                SoapTypingDB::GetInstance()->deleteSample(itemN->text(0));
+            }
+            QString str_sample = m_pSelByRightItem->text(0).split('_').at(0);
+            QVector<QString> vec_sample;
+            vec_sample.push_back(str_sample);
+            emit signalChangeDBByFile(vec_sample);
         }
-        slotFileChanged(signalInfo_, 1);
         break;
     case QMessageBox::No:
         break;
@@ -619,27 +343,17 @@ void SampleTreeWidget::slotDelete()
     }
 }
 
-void SampleTreeWidget::slotShowGSSPZCode()
-{
-
-}
-
 void SampleTreeWidget::slotUserComments()
 {
-    UserCommentDlg user;
-    user.setSampleName(signalInfo_.sampleName);
-    user.exec();
-
-}
-
-void SampleTreeWidget::slotSetFinalType()
-{
-
+    QString str_sample = m_pSelByRightItem->text(0).split('_').at(0);
+    UserCommentDlg dlg(this);
+    dlg.setSampleName(str_sample);
+    dlg.exec();
 }
 
 void SampleTreeWidget::slotDeleteSelectedItem()
 {
-    QVector<QString> fileNames;
+    QMap<QString,QString> fileNames;
     QVector<QString> sampleNames;
     QVector<QString> updateNames;
     for(int i=0; i<topLevelItemCount();i++)
@@ -649,33 +363,60 @@ void SampleTreeWidget::slotDeleteSelectedItem()
             sampleNames.push_back(topLevelItem(i)->text(0));
             continue;
         }
-        bool flag = false;
-        for(int j=0; j<topLevelItem(i)->childCount(); j++)
+
+        int count = 0; //每个样品下选中的文件数
+        for(int j=0;j<topLevelItem(i)->childCount(); j++)
         {
-            if(topLevelItem(i)->child(j)->isSelected() && !topLevelItem(i)->child(j)->text(0).contains("Combined"))
+            if(!topLevelItem(i)->child(j)->text(0).contains("Combined"))
             {
-                fileNames.push_back(topLevelItem(i)->child(j)->text(0));
-                flag = true;
+                if(topLevelItem(i)->child(j)->isSelected())
+                {
+                    count++;
+                    fileNames.insert(topLevelItem(i)->child(j)->text(0),topLevelItem(i)->child(j)->text(1));
+                }
+            }
+            else
+            {
+                count++;
             }
         }
-        if(flag)
+
+        if(count == topLevelItem(i)->childCount())//当前样品选中了所有文件
+        {
+            sampleNames.push_back(topLevelItem(i)->text(0));
+            continue;
+        }
+
+        if(count)
         {
             updateNames.push_back(topLevelItem(i)->text(0));
         }
     }
     for(int i=0; i<sampleNames.size();i++)
     {
-        deleteSample(sampleNames.at(i).toAscii());
+        SoapTypingDB::GetInstance()->deleteSample(sampleNames[i]);
     }
-    for(int i=0; i<fileNames.size();i++)
+
+    QMap<QString,QString>::iterator itor = fileNames.begin();
+    for(; itor != fileNames.end(); itor++)
     {
-        deleteFile(fileNames.at(i).toAscii());
+        if (itor.value().contains("Filter")) //gssp文件
+        {
+            SoapTypingDB::GetInstance()->deleteFile(true, itor.key());
+        }
+        else
+        {
+            SoapTypingDB::GetInstance()->deleteFile(false, itor.key());
+        }
     }
-    for(int i=0; i<updateNames.size();i++)
-    {
-        analysisSample(updateNames.at(i).toAscii());
-    }
-    slotFileChanged(signalInfo_, 1);
+
+    emit signalChangeDBByFile(updateNames);
+}
+
+void SampleTreeWidget::slotCopyName()
+{
+    QClipboard *board = QApplication::clipboard();
+    board->setText(currentItem()->text(0));
 }
 
 void SampleTreeWidget::slotMarkPendingReview()
@@ -700,7 +441,6 @@ void SampleTreeWidget::slotUnlock()
 
 void SampleTreeWidget::slotMarkPendingAndClear()
 {
-
     markSampleTypeAndClear(PENDING);
 }
 
@@ -712,55 +452,4 @@ void SampleTreeWidget::slotMarkReviewedAndClear()
 void SampleTreeWidget::slotMarkApprovedAndClear()
 {
     markSampleTypeAndClear(APPROVED);
-}
-void SampleTreeWidget::slotCopyName()
-{
-    QClipboard *board = QApplication::clipboard();
-    board->setText(currentItem()->text(0));
-}
-
-void SampleTreeWidget::markSampleTypeAndClear(int markType)
-{
-    int mark = getMarkTypeBySampleName(signalInfo_.sampleName.toAscii());
-    if(mark==APPROVED && markType!=OWNED)
-    {
-        QMessageBox::warning(this, tr("Soap Typing"),tr("Please unlock the sample as it was marked approved"));
-        return;
-    }
-    setMarkTypeBySampleName(signalInfo_.sampleName.toAscii(), markType);
-    int topIndex = getSampleIndex(signalInfo_.sampleName);
-    sampleTreeInfoList_[topIndex].markType = markType;
-    slotQuickSaveAndClear();
-}
-
-void SampleTreeWidget::emitAfterDelete()
-{
-    if(topLevelItemCount()<=0)
-    {
-        signalInfo_.sampleName="";
-        emit signalFileChnaged(signalInfo_, 1);
-    }
-    else
-    {
-        expandSample(0);
-    }
-}
-
-void SampleTreeWidget::keyPressEvent(QKeyEvent *event)
-{
-    if(topLevelItemCount()<=0)
-        return;
-
-    if(event->key()==Qt::Key_Control || event->key()==Qt::Key_Shift)
-    {
-        onControl = true;
-    }
-    else if(event->key()==Qt::Key_C)
-    {
-        slotCopyName();
-    }
-}
-void SampleTreeWidget::keyReleaseEvent(QKeyEvent *event)
-{
-    onControl = false;
 }

@@ -1,160 +1,96 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
-#include "database/realtimedatabase.h"
-#include "database/staticdatabase.h"
-#include "core/analysis.h"
-#include "sampletreewidget.h"
-#include "matchlist.h"
-#include "exonnavigator.h"
-#include "basealigntable.h"
-#include "dialog/openfiledlg.h"
-#include "dialog/allelepairdlg.h"
-#include "dialog/alignmentdialog.h"
-#include <QtGui>
-#include <QtCore>
-#include "Main_Oscillogram.h"
-#define VERSION "1.0.5.1"
 
+#include <QMainWindow>
+#include <qscrollarea.h>
+#include <QTreeWidgetItem>
+#include <QTableWidgetItem>
+
+namespace Ui {
+class MainWindow;
+}
+
+class SampleTreeWidget;
+class MatchListWidget;
+class MultiPeakWidget;
+class ExonNavigatorWidget;
+class BaseAlignTableWidget;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-public:
-    MainWindow(QWidget *parent = 0);
 
-    void setDatabaseInfo(bool has);
-    void onWindowOpen();
+public:
+    explicit MainWindow(QWidget *parent = 0);
+    ~MainWindow();
+    void InitData();
+private:
+    void SetStatusbar();                    //显示底部左侧状态栏信息
+    void ConnectSignalandSlot();            //连接信号与槽函数
+    void DisConnectSignalandSolt();         //断开信号与槽函数连接
+    void closeEvent(QCloseEvent *e);
+    void InitUI();
+
 public slots:
-    void slotOpen();
-    void slotSave();
-    void slotDelete();
-    void slotLoadFile();
-    void slotReport();
-    void slotFileChanged(SignalInfo &signalInfo, int type);
-    void slotAlignPair();
-    void slotAlignLab();
+    void slotSampleTreeItemChanged(QTreeWidgetItem *item, int col);
+    void slotExonFocusPosition(int startpos, int selectpos, int exonstartpos, int index);
+    void slotAlignTableFocusPosition(QTableWidgetItem *item);
+    void slotPeakFocusPosition(int index, int colnum);
+
+    void slotShowSaveDlg();
+    void slotShowLoadFileDlg();
+    void slotShowOpenDlg();
+    void slotShowDeleteDlg();
+    void slotShowExportDlg();
+
+    void slotReset();
+    void slotMisPosForward();
+    void slotMisPosBackward();
     void slotMarkAllSampleApproved();
     void slotMarkAllSampleReviewed();
-    void slotReset();
+    void slotAlignPair();
+    void slotAlignLab();
+    void slotUpdateDatabase();
     void slotControl();
     void slotSetExonTrim();
-    void slotUpdateDatabase();
-    void slotchengebp()
-    {
-        if(analyseLater->isIconVisibleInMenu())
-            analyse->setEnabled(true);
-    }
-    void slotanalyse()
-    {
-        analyse->setEnabled(false);
-    }
+
+    void slotyRangeRoomUp();
+    void slotyRangeRoomDown();
+    void slotyRoomUp();
+    void slotyRoomDown();
+    void slotxRoomUp();
+    void slotxRoomDown();
+    void slotResetRoom();
 
     void slotApplyOne();
     void slotApplyAll();
-    void slotAnalyseLater()
-    {
-        analyseLater->setIconVisibleInMenu(true);
-        analyseNow->setIconVisibleInMenu(false);
-    }
-    void slotAnalyseNow()
-    {
-        analyseLater->setIconVisibleInMenu(false);
-        analyseNow->setIconVisibleInMenu(true);
-    }
+    void slotAnalyseLater();
+    void slotAnalyseNow();
+    void slotanalyse();
 
-    void slotDocument();
     void slotAbout();
-    void slotMsgStr(QString msgstr); //新增
-signals:
-    void signalFileChanged(SignalInfo &signalInfo, int type);
-    void signalAllelePair(QString &allele1, QString &allele2);
-protected:
-    void closeEvent(QCloseEvent *e);
-    void timerEvent(QTimerEvent *e); //新增
+    void slotHelp();
+
+    void slotAllelePairChanged(QString &, QString &);
+    void slotTypeMisMatchPostion(QSet<int> &typeMismatchPos, int type);
+    void slotShowStatusBarMsg(const QString &msg);
+
+    void slotChangeDB(const QString &str_samplename);
+    void slotChangeDBByFile(QVector<QString> &vec_samplename);
+
+    void slotClearAll();//清空当前显示信息
+
+    void slotPeakAct(int type);
 private:
-    void createActions();
-    void createMenus();
-    void createBars();
-    void createDefault();
-    void setDeleteFile(int dateNum);//新增，设置需要删除的天数，并找到需要删除的文件夹。
-    bool removeFolderContent(QString &folderDir);//新增，删除文件夹下所有内容和文件
-private:
-    //    QWidget *centralWidget;
-    //    QVBoxLayout *vBoxLayout;
-    bool has_database;
-    SampleTreeWidget *sampleTree;
-    MatchListWidget *matchListTable;
-    ExonNavigator *exonNavigator;
-    BaseAlignTable *baseAlignTable;
-    Main_Oscillogram * main_mscillogram;
-    QMenu *menuadd;
-    //    RegionShow *regionShow;
-    //    QSplitter *rightSplitter;
-    //    QSplitter *leftSplitter;
-    //    QSplitter *mainSplitter;
-
-    QMenu *menuFile;
-    QMenu *menuTool;
-    QMenu *menuFileTree;
-    QMenu *menuTypeTable;
-    QMenu *menuRegionShow;
-    AlignmentDialog  *align;
-
-    QMenuBar *menuBar;
-    QToolBar *toolBarFile;
-    QToolBar *toolBarTool;
-    QToolBar *toolBarPeak;
-    QStatusBar *statusBar;
-
-    QAction *actionOpenNewFile;
-    QAction *actionOpenOldFile;
-    QAction *actionSaveAll;
-    QAction *actionDeleteAll;
-    QAction *actionReport;
-
-    QAction *actionReset;
-
-    QAction *actionMarkSuccessfulAll;
-    QAction *actionMarkFinishedAll;
-    QAction *actionAllelePairAlign;
-    QAction *actionLabAlleleAlign;
-
-    QAction *actionBackward;
-    QAction *actionForward;
-    QAction *actionShowGSSPZCode;
-    QAction *actionShowUndefinedExon;
-
-
-    QAction *actionZoomYAxisIncrease;
-    QAction *actionZoomYAxisReduce;
-    QAction *actionZoomYIncrease;
-    QAction *actionZoomYReduce;
-    QAction *actionZoomXIncrease;
-    QAction *actionZoomXReduce;
-    QAction *actionZoomReset;
-
-    QAction *actionApplyOne;
-    QAction *actionApplyAll;
-    QAction *analyseLater;
-    QAction *analyseNow;
-    QAction *analyse;
-
-    QMenu *menuSet;
-
-    QAction *actionControl;
-
-    QAction *actionExonTrim;
-    QAction *actionUpdateDatabase;
-
-    QMenu *menuHelp;
-    QAction *actionAbout;
-    QAction *actionDocument;
-
-    SignalInfo signalInfo_;
-
-    int    timerID; //新增
-    QLineEdit *msgLabel; //新增
-    int     space; //新增
+    Ui::MainWindow *ui;
+    SampleTreeWidget *m_pSampleTreeWidget;
+    MatchListWidget *m_pMatchListWidget;
+    MultiPeakWidget *m_pMultiPeakWidget;
+    ExonNavigatorWidget *m_pExonNavigatorWidget;
+    BaseAlignTableWidget *m_pBaseAlignTableWidget;
+    QScrollArea *m_pPeak_area;
+    QString m_str_SelectFile;           //保存样品列表选中的文件名称
+    QString m_str_SelectSample;         //保存样品列表选中的样品名称
+    QTreeWidgetItem *m_pSelectItem;     //保存样品列表选中的item
 };
-
 
 #endif // MAINWINDOW_H

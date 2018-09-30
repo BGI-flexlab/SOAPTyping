@@ -1,26 +1,26 @@
 #ifndef SETDLG_H
 #define SETDLG_H
-#include <QtCore>
-#include <QtGui>
+
+#include <QDialog>
+
+namespace Ui {
+class SetDlg;
+}
 
 class SetDlg : public QDialog
 {
     Q_OBJECT
+
 public:
-    SetDlg(QWidget *parent=0);
+    explicit SetDlg(QWidget *parent = nullptr);
+    ~SetDlg();
+private:
+    void ConnectSignalandSlot();
 private slots:
-    void slotClickResetBt();
-    void slotClickSaveBt();
+    void slotClickResetButton();
+    void slotClickSaveButton();
 private:
-    void setDefault();
-    void setDefaultInfo(QMap<QString, QString> &config);
-private:
-    QCheckBox *ignoreIndelBox;
-    QLineEdit *openFileThreadLine;
-    QLineEdit *analysisSampleThreadLine;
-    QPushButton *saveBt;
-    QPushButton *exitBt;
-    QPushButton *resetBt;
+    Ui::SetDlg *ui;
 };
 
 #endif // SETDLG_H

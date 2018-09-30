@@ -1,10 +1,11 @@
 #ifndef LOADFILEDLG_H
 #define LOADFILEDLG_H
-#include <QtGui>
-#include <QtCore>
-#include "database/realtimedatabase.h"
 
-void readListFile(const QString &listFilePath, QVector<QString> &samplePaths, QVector<QString> &filePaths, QVector<QString> &gsspFilePaths);
+#include <QDialog>
+
+namespace Ui {
+class LoadFileDlg;
+}
 
 struct LoadInfo
 {
@@ -20,31 +21,33 @@ struct LoadInfo
 class LoadFileDlg : public QDialog
 {
     Q_OBJECT
+
 public:
-    LoadFileDlg(bool *isDone, QWidget *parent=0);
-private slots:
-    void slotClickCheckAllBox(bool);
-    void slotClickLoadButton();
-    void slotdateComboBoxChagned(int);
-    void slotLineEditChanged(QString);
+    explicit LoadFileDlg(QWidget *parent = nullptr);
+    ~LoadFileDlg();
+
 private:
+    void InitUI();
+    void ConnectSignalandSlot();
     void getLoadInfo();
     void getOkIndex();
-    void setLoadFileDlgDefault();
-    void setTableDate();
+    void SetTableData();
+    void readListFile(const QString &listFilePath, QVector<QString> &samplePaths,
+                      QVector<QString> &filePaths, QVector<QString> &gsspFilePaths);
+    void loadSample(const QString &strPath);
+    void loadFile(const QString &strPath);
+    void loadGssp(const QString &strPath);
+private slots:
+    void slotClickLoadButton();
+    void slotClickCheckAllBox(bool status);
+    void slotdateComboBoxChagned(int index);
+    void slotLineEditChanged(const QString & name);
 private:
-    int daysNum;
-    QString name;
-    QTableWidget *table;
-    QCheckBox *checkAllBox;
-    QPushButton *loadButton;
-    QPushButton *exitButton;
-    QComboBox *dateComboBox;
-    QLineEdit *nameLineEdit;
-    QPushButton *labelButton;
-    QProgressBar *progressBar;
-    QVector<LoadInfo> loadInfos;
-    QVector<int> okFileIndex;
-    bool *isDone_;
+    Ui::LoadFileDlg *ui;
+    int m_idaysNum;
+    QString m_str_SearchName;
+    QVector<int> m_vec_index;
+    QVector<LoadInfo> m_vec_LoadInfo;
 };
+
 #endif // LOADFILEDLG_H

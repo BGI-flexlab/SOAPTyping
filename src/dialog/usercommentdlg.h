@@ -1,25 +1,26 @@
 #ifndef USERCOMMENTDLG_H
 #define USERCOMMENTDLG_H
-#include <QtCore>
-#include <QtGui>
 
-class UserCommentDlg:public QDialog
+#include <QDialog>
+
+namespace Ui {
+class UserCommentDlg;
+}
+
+class UserCommentDlg : public QDialog
 {
     Q_OBJECT
+
 public:
-    UserCommentDlg(QWidget *parent=0);
+    explicit UserCommentDlg(QWidget *parent = nullptr);
+    ~UserCommentDlg();
     void setSampleName(const QString &sampleName);
-private:
-    void setDefault();
+
 private slots:
-    void slotClickSaveBt();
-    void slotCommentChanged();
+    void slotSave();
 private:
-    QLineEdit *sampleNameLine_;
-    QTextEdit *commentEdit_;
-    QPushButton *saveBt_;
-    QPushButton *exitBt_;
-    QString sampleName_;
+    Ui::UserCommentDlg *ui;
+    QString m_str_SampleName;
 };
 
 #endif // USERCOMMENTDLG_H
