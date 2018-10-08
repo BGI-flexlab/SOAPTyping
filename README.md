@@ -102,16 +102,16 @@ Additionally, if users want to update the GSSP information, text file contains t
 ![gsspInsert][7]
 
 ### Utilities
-SOAPTyping supplies a set of utilities to assist the analysis. (1) Setting analysis threads. Click on the ‘Setting’ button (Fig S3) and choose ‘Set Thread’ to set a suitable number of threads to accelerate analysis. (2) Customizing the exon region for analysis. Click on the ‘Setting’ button and choose ‘Set Exon Trim’ to excluded the bases of both ends of the exon, excluded parts are not considered in analysis. (3) Alleles alignment. Click on the ‘Allele Alignment’ button (Figure 1) to invoke the alignment tool, users can choose a locus from the ‘Genes’ drop-down list and all the available alleles of this locus will be listed in the panel below. The alignment result will be displayed after the alleles of interest are chosen (Figure 8)
+SOAPTyping supplies a set of utilities to assist the analysis. (1) Setting analysis threads. Click on the ‘Setting’ button (Fig S3) and choose ‘Set Thread’ to set a suitable number of threads to accelerate analysis. (2) Customizing the exon region for analysis. Click on the ‘Setting’ button and choose ‘Set Exon Trim’ to excluded the bases of both ends of the exon, excluded parts are not considered in analysis. (3) Alleles alignment. Click on the ‘Allele Alignment’ button (Figure 1) to invoke the alignment tool, users can choose a locus from the ‘Genes’ drop-down list and all the available alleles of this locus will be listed in the panel below. The alignment result will be displayed after the alleles of interest are chosen. (Figure 8)
 
 >**Figure 8** Allele alignment.
 ![alleleAlignment][8]
 
-  [1]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/mainUI.png
-  [2]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/propositionalWorkflow.png
-  [3]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/openFile.png
-  [4]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/reportDemo.png
-  [5]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/databaseUpdate.png
-  [6]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/gsspUpdate.png
-  [7]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/gsspInsert.png
-  [8]: https://raw.githubusercontent.com/BGI-flexlab/SOAPtyping/master/doc/images/alleleAlignment.png
+  [1]: https://raw.githubusercontent.com/BGI-flexlab/SOAPTyping/master/doc/images/mainUI.png
+  [2]: https://raw.githubusercontent.com/BGI-flexlab/SOAPTyping/master/doc/images/propositionalWorkflow.png
+  [3]: https://raw.githubusercontent.com/BGI-flexlab/SOAPTyping/master/doc/images/openFile.png
+  [4]: https://raw.githubusercontent.com/BGI-flexlab/SOAPTyping/master/doc/images/reportDemo.png
+  [5]: https://raw.githubusercontent.com/BGI-flexlab/SOAPTyping/master/doc/images/databaseUpdate.png
+  [6]: https://raw.githubusercontent.com/BGI-flexlab/SOAPTyping/master/doc/images/gsspUpdate.png
+  [7]: https://raw.githubusercontent.com/BGI-flexlab/SOAPTyping/master/doc/images/gsspInsert.png
+  [8]: https://raw.githubusercontent.com/BGI-flexlab/SOAPTyping/master/doc/images/alleleAlignment.png
