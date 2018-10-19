@@ -28,7 +28,6 @@ void BaseAlignTableWidget::InitUI()
     setSelectionMode(QAbstractItemView::SingleSelection);
     setContextMenuPolicy(Qt::NoContextMenu);
     horizontalHeader()->setStretchLastSection(true);
-    //setStyleSheet("selection-background-color:rgba(255,255,0,127);QTableView::item:selected{color:black;}");
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     verticalHeader()->setDefaultSectionSize(20); //设置行高
     horizontalHeader()->setFixedHeight(20); //设置表头的高度

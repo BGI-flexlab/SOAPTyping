@@ -6,6 +6,7 @@
 #include <QDate>
 #include <QTime>
 #include <QTextStream>
+#include <QDir>
 
 ReportDlg::ReportDlg(QWidget *parent) :
     QDialog(parent),
@@ -33,14 +34,16 @@ void ReportDlg::setDefaultPath()
 {
     QString strDir;
     Core::GetInstance()->GetConfig("path/ReportDir",strDir);
-    if(!strDir.isEmpty())
+    QString strfile = QString("%1_%2.xls").arg(QDate::currentDate().toString("yyyy_MM_dd"))
+                                        .arg(QTime::currentTime().toString("hh_mm_ss_zzz"));
+    if(strDir.isEmpty())
     {
-        QString strPath = QString("%1%2%3%4.xls").arg(strDir).arg(QDir::separator())
-                .arg(QDate::currentDate().toString("yyyy_MM_dd"))
-                .arg(QTime::currentTime().toString("hh_mm_ss_zzz"));
-
-        ui->lineEdit_path->setText(strPath);
+        strDir = QDir::home().path();
+        Core::GetInstance()->SetConfig("path/ReportDir",strDir);
     }
+
+    QString strPath = QString("%1%2%3").arg(strDir).arg(QDir::separator()).arg(strfile);
+    ui->lineEdit_path->setText(strPath);
 }
 
 void ReportDlg::setVersion(const QString &strVer)
@@ -58,7 +61,7 @@ void ReportDlg::slotClickScanBt()
     {
         Core::GetInstance()->SetConfig("path/ReportDir",strSelectDir);
 
-        QString strPath = QString("%1%2%3%4.xls").arg(strSelectDir).arg(QDir::separator())
+        QString strPath = QString("%1%2%3_%4.xls").arg(strSelectDir).arg(QDir::separator())
                 .arg(QDate::currentDate().toString("yyyy_MM_dd"))
                 .arg(QTime::currentTime().toString("hh_mm_ss_zzz"));
 

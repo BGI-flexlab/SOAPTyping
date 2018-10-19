@@ -62,7 +62,7 @@ class AlignmentDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit AlignmentDlg(QWidget *parent = nullptr);
+    explicit AlignmentDlg(QWidget *parent = nullptr,const QString &strver="");
     ~AlignmentDlg();
 private:
     void InitUI();
@@ -77,6 +77,7 @@ private slots:
 private:
     Ui::AlignmentDlg *ui;
     QString m_str_geneInfo;
+    QString m_str_genever;
     QVector<int> m_vec_exon;
     QStringList m_strlist_alleleNames;
     QStringList m_strlist_alleleSeqs;

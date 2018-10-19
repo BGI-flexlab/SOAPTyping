@@ -46,22 +46,31 @@ public:
 
     void setAvgSignal(float signal);
     float getAvgSignal();
+
+    void setPeakYSetp(int y);
+    int getPeakYStep();
+
+    void setPeakHeight(int height);
+    int getPeakHeight();
 private:
+    bool m_bGssp;
     int m_left_exclude;
     int m_right_exclude;
     int m_iAlignStart;
     int m_iAlignEnd;
+
+    int m_y_step;            //y轴间距
+    int m_iPeakHeight;      //峰图实际高度
+
     long m_lsize;
     long m_loffset;
-    bool m_bGssp;
     float m_f_avgwidth;
     float m_f_avgsignal;
+    QString m_strFileName;
     QPolygonF m_vec_baseA;
     QPolygonF m_vec_baseT;
     QPolygonF m_vec_baseG;
     QPolygonF m_vec_baseC;
-
-    QString m_strFileName;
     QVector<GeneLetter> m_vec_GeneLetter;
 };
 
@@ -98,18 +107,19 @@ private:
     void keyPressEvent(QKeyEvent *event);
     void SetPeakLineData();
     void ExcludeArea(int type); //type:1代表左排除，2代表右排除,3代表恢复
+    void loadFontFromFile();
 public slots:
     void slotApplyOne();
     void slotApplyAll();
     void slotAnalyseLater();
     void slotAnalyseNow();
+    void slotActanalyze();
 private slots:
     void slotDelteThisFile();
     void slotActApplyOne();
     void slotActApplyAll();  
     void slotActanalyzeLater();  
     void slotActanalyzeNow();
-    void slotActanalyze();
     void slotHighLightLeftPart();
     void slotHighLightRightPart();
     void slotResetExclude();
@@ -127,18 +137,19 @@ signals:
 private:
     QVector<Ab1FileTableBase> m_vec_filetable;
     bool m_bRefresh;
+    bool m_bApplyOne;        //true调整单个峰图,false调整所有峰图
+    bool m_bEditOne;         //true单个编辑后立即分析，false多个编辑后分析
     int m_x_step;            //x轴间距
-    int m_y_step;            //y轴间距
     QPoint m_select_pos;    //选中碱基的位置
     bool m_bIsSelect;      //是否选中了一个碱基
     int m_index_Select;    //选中碱基的下标
     int m_index_PeakLine;   //当前选中的峰图下标
     long m_l_xSize;         //x轴的长度
-    int m_iPeakHeight;      //峰图实际高度
+    int m_iPeakHeightTotal;   //所有峰图的高度之和
     QString m_str_SampleName;//样品名称
     int m_index_Exon;        //碱基index
     QVector<QSharedPointer<PeakLine>> m_vec_Peakline;
-
+    QString m_str_fontName;
     QMenu *m_pRightMenu;
     QAction *m_pActDelete;
     QAction *m_pActInsertBaseN;

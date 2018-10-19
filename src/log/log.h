@@ -37,7 +37,7 @@ class Log_Writer
 		~Log_Writer(){
 			logclose();
 		}
-		bool loginit(LogLevel l, const  char *filelocation, bool append = true, bool issync = false);
+        bool loginit(LogLevel l, const  char *filelocation, bool append = true, bool issync = true);
 		bool log(LogLevel l,char *logformat,...);
 		LogLevel get_level();
 		bool logclose();

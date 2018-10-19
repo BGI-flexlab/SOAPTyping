@@ -276,5 +276,45 @@ struct ExonTrimTable
     QString excludeRight;
 };
 
+struct  GeneTable
+{
+    QString geneName;
+    QString geneSequence;
+    int exonCount;
+    QString exonPostionIndex;
+    QString geneClasses;
+    QString availableExon;
+    QString version;
+};
+
+struct AlleleTable
+{
+    QString alleleName;
+    QString alleleSequence;
+    QString geneName;
+    int isRare;
+    int isIndel;
+    int classesNumber;
+    int indelPosition;
+    QString indelInfo;
+    QString noStar;
+};
+
+struct LabAlignTable
+{
+    QString alleleName;
+    QString alleleSequence;
+    QString geneName;
+    QString misPosition;
+};
+
+struct CommonGsspTable
+{
+    QString gsspName;
+    QString geneName;
+    QString exonIndex;
+    QString fOrR;
+};
+
 #endif // ALL_BASE_STRUCT_H
 

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <QReadWriteLock>
+#include <QDir>
 
 Log_Writer INFO_W;
 __thread char Log_Writer::m_buffer[_LOG_BUFFSIZE];
@@ -16,12 +17,8 @@ QReadWriteLock g_lock;
 
 bool log_init(LogLevel l, const char* p_modulename, const char* p_logdir)
 {
-	//如果路径存在文件夹，则判断是否存在
-	if (access (p_logdir, 0) == -1)
-	{
-        if (mkdir(p_logdir) < 0)
-			fprintf(stderr, "create folder failed\n");
-	}
+    QDir dir;
+    dir.mkpath(p_logdir);
     char _location_str[_LOG_PATH_LEN]={0};
     time_t now;
     now = time(&now);;

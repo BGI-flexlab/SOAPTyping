@@ -27,7 +27,7 @@ private:
     void SetStatusbar();                    //显示底部左侧状态栏信息
     void ConnectSignalandSlot();            //连接信号与槽函数
     void DisConnectSignalandSolt();         //断开信号与槽函数连接
-    void closeEvent(QCloseEvent *e);
+    virtual void closeEvent(QCloseEvent *e);
     void InitUI();
 
 public slots:
@@ -91,6 +91,7 @@ private:
     QString m_str_SelectFile;           //保存样品列表选中的文件名称
     QString m_str_SelectSample;         //保存样品列表选中的样品名称
     QTreeWidgetItem *m_pSelectItem;     //保存样品列表选中的item
+    QString m_str_GeneVer;              //保存基因表的版本号
 };
 
 #endif // MAINWINDOW_H

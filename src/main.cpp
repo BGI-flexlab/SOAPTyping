@@ -8,6 +8,10 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+    QCoreApplication::addLibraryPath("./plugins");
+    QCoreApplication::addLibraryPath("./plugins/platforms");
+    QCoreApplication::addLibraryPath("./plugins/styles");
+
     QFile qssF(":/qss/qss");
     if(qssF.open(QFile::ReadOnly))
     {

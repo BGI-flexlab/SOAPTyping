@@ -35,7 +35,7 @@ bool SoapTypingDB::InitDB()
     QString str = QTime::currentTime().toString("hh_mm_ss_zzz");
     QString str_connect = QString("connect-%1").arg(str);
     m_SqlDB = QSqlDatabase::addDatabase("QSQLITE",str_connect);
-    m_SqlDB.setDatabaseName("./SoapTypingDB.db");
+    m_SqlDB.setDatabaseName("./DataBase/SoapTypingDB.db");
 
     bool bRet = m_SqlDB.open();
     if(!bRet)
@@ -1646,6 +1646,20 @@ void SoapTypingDB::getAlleleNameListFromStaticDabase(const QString &geneName, QS
     }
 }
 
+void SoapTypingDB::getGeneVersion(QString &strver)
+{
+    QSqlQuery query(m_SqlDB);
+    bool isSuccess = query.exec("SELECT version FROM geneTable");
+    if(isSuccess)
+    {
+        while(query.next())
+        {
+            strver = query.value(0).toString();
+            break;
+        }
+    }
+}
+
 void SoapTypingDB::getGeneNames(QStringList &geneNames)
 {
     QSqlQuery query(m_SqlDB);
@@ -1787,4 +1801,269 @@ bool SoapTypingDB::upDataExclude(bool isgssp, const QString &filename, int exclu
         return false;
     }
     return true;
+}
+
+bool SoapTypingDB::deleteTable(const QString &tableName)
+{
+    QSqlQuery query(m_SqlDB);
+    query.prepare("DELETE FROM "+tableName);
+    return query.exec();
+}
+
+void SoapTypingDB::insertGeneTable(const GeneTable &geneTable)
+{
+    QSqlQuery query(m_SqlDB);
+    query.prepare("INSERT INTO geneTable (geneName,"
+                  "geneSequence,exonCount,exonPositionIndex,"
+                  "geneClasses,availableExon,version)"
+                  "VALUES (?,?,?,?,?,?,?)");
+    query.bindValue(0, geneTable.geneName);
+    query.bindValue(1, geneTable.geneSequence);
+    query.bindValue(2, geneTable.exonCount);
+    query.bindValue(3, geneTable.exonPostionIndex);
+    query.bindValue(4, geneTable.geneClasses);
+    query.bindValue(5, geneTable.availableExon);
+    query.bindValue(6, geneTable.version);
+    bool isSuccess = query.exec();
+    if(!isSuccess)
+    {
+        LOG_DEBUG("%s insert fail",geneTable.geneName.toStdString().c_str());
+    }
+}
+
+void SoapTypingDB::readGeneTableTxtFile(const QString &geneFile)
+{
+    QFile file(geneFile);
+    if(file.open(QFile::ReadOnly))
+    {
+        QTextStream stream(&file);
+        deleteTable("geneTable");//更新版本，清除旧版本数据
+        m_SqlDB.transaction();
+        while(!stream.atEnd())
+        {
+            QString line = stream.readLine();
+            QStringList part = line.split("\t");
+            if(part.size() == 7)
+            {
+                GeneTable geneTable;
+                geneTable.geneName = part.at(0);
+                geneTable.geneSequence = part.at(1);
+                geneTable.exonCount = part.at(2).toInt();
+                geneTable.exonPostionIndex = part.at(3);
+                geneTable.geneClasses = part.at(4);
+                geneTable.availableExon = part.at(5);
+                geneTable.version = part.at(6);
+                insertGeneTable(geneTable);
+            }
+
+        }
+        file.close();
+        m_SqlDB.commit();
+    }
+}
+
+void SoapTypingDB::insertAlleleTable(const AlleleTable &alleleTable)
+{
+    QSqlQuery query(m_SqlDB);
+    query.prepare("INSERT INTO alleleTable (alleleName,"
+                  "alleleSequence,geneName,isRare,"
+                  "isIndel,classesNumber,indelPostion,"
+                  "indelInfo,noStar)"
+                  "VALUES (?,?,?,?,?,?,?,?,?)");
+    query.bindValue(0, alleleTable.alleleName);
+    query.bindValue(1, alleleTable.alleleSequence);
+    query.bindValue(2, alleleTable.geneName);
+    query.bindValue(3, alleleTable.isRare);
+    query.bindValue(4, alleleTable.isIndel);
+    query.bindValue(5, alleleTable.classesNumber);
+    query.bindValue(6, alleleTable.indelPosition);
+    query.bindValue(7, alleleTable.indelInfo);
+    query.bindValue(8, alleleTable.noStar);
+    bool isSuccess = query.exec();
+    if(!isSuccess)
+    {
+        LOG_DEBUG("%s insert fail",alleleTable.alleleName.toStdString().c_str());
+    }
+}
+
+void SoapTypingDB::readAlleleTableTxtFile(const QString &alleleFile)
+{
+    QFile file(alleleFile);
+    if(file.open(QFile::ReadOnly))
+    {
+        QTextStream stream(&file);
+        deleteTable("alleleTable");
+        m_SqlDB.transaction();
+        while(!stream.atEnd())
+        {
+            QString line = stream.readLine();
+            QStringList part = line.split("\t");
+            if(part.size() == 9)
+            {
+                AlleleTable alleleTable;
+                alleleTable.alleleName = part.at(0);
+                alleleTable.alleleSequence = part.at(1);
+                alleleTable.geneName = part.at(2);
+                alleleTable.isRare = part.at(3).toInt();
+                alleleTable.isIndel = part.at(4).toInt();
+                alleleTable.classesNumber = part.at(5).toInt();
+                alleleTable.indelPosition = part.at(6).toInt();
+                alleleTable.indelInfo = part.at(7);
+                alleleTable.noStar = part.at(8);
+                insertAlleleTable(alleleTable);
+            }
+        }
+        file.close();
+        m_SqlDB.commit();
+    }
+}
+
+void SoapTypingDB::insertGsspTable(const GsspTable &gsspTable)
+{
+    QSqlQuery query(m_SqlDB);
+    query.prepare("INSERT or REPLACE INTO gsspTable (gsspKey,"
+                  "gsspName,geneName,exonIndex,rOrF,"
+                  "position,base)"
+                  "VALUES (?,?,?,?,?,?,?)");
+    query.bindValue(0, gsspTable.gsspKey);
+    query.bindValue(1, gsspTable.gsspName);
+    query.bindValue(2, gsspTable.geneName);
+    query.bindValue(3, gsspTable.exonIndex);
+    query.bindValue(4, gsspTable.rOrF);
+    query.bindValue(5, gsspTable.position);
+    query.bindValue(6, gsspTable.base);
+    bool isSuccess = query.exec();
+    if(!isSuccess)
+    {
+        LOG_DEBUG("%s insert fail",gsspTable.gsspName.toStdString().c_str());
+    }
+}
+
+void SoapTypingDB::readGsspTableTxtFile(const QString &gsspFile)
+{
+    QFile file(gsspFile);
+    if(file.open(QFile::ReadOnly))
+    {
+        QTextStream stream(&file);
+        m_SqlDB.transaction();
+        while(!stream.atEnd())
+        {
+            QString line = stream.readLine();
+            QStringList part = line.split("\t");
+            if(part.size() == 6)
+            {
+                GsspTable gsspTable;
+                gsspTable.gsspName = part.at(0);
+                gsspTable.geneName = part.at(1);
+                gsspTable.exonIndex = part.at(2).toInt();
+                gsspTable.rOrF = part.at(3);
+                gsspTable.position = part.at(4).toInt();
+                gsspTable.base = part.at(5).toLatin1();
+                gsspTable.gsspKey = gsspTable.gsspName+"_"+gsspTable.geneName;
+                insertGsspTable(gsspTable);
+            }
+        }
+        file.close();
+        m_SqlDB.commit();
+    }
+}
+
+void SoapTypingDB::insertLabAlignTable(const LabAlignTable &labAlignTable)
+{
+    QSqlQuery query(m_SqlDB);
+    query.prepare("INSERT INTO labAlignTable (alleleName,"
+                  "alleleSequence,geneName,misPosition)"
+                  "VALUES (?,?,?,?)");
+    query.bindValue(0, labAlignTable.alleleName);
+    query.bindValue(1, labAlignTable.alleleSequence);
+    query.bindValue(2, labAlignTable.geneName);
+    query.bindValue(3, labAlignTable.misPosition);
+
+    bool isSuccess = query.exec();
+    if(!isSuccess)
+    {
+        LOG_DEBUG("%s insert fail",labAlignTable.alleleName.toStdString().c_str());
+    }
+}
+
+void SoapTypingDB::readLabAlignTableTxtFile(const QString &labAlignFile)
+{
+    QFile file(labAlignFile);
+    if(file.open(QFile::ReadOnly))
+    {
+        QTextStream stream(&file);
+        deleteTable("labAlignTable");
+        m_SqlDB.transaction();
+        while(!stream.atEnd())
+        {
+            QString line = stream.readLine();
+            QStringList part = line.split("\t");
+            if(part.size() == 4)
+            {
+                LabAlignTable labAlignTable;
+                labAlignTable.alleleName = part.at(0);
+                labAlignTable.alleleSequence = part.at(1);
+                labAlignTable.geneName = part.at(2);
+                labAlignTable.misPosition = part.at(3);
+                insertLabAlignTable(labAlignTable);
+            }
+
+        }
+        file.close();
+        m_SqlDB.commit();
+    }
+}
+
+void SoapTypingDB::insertCommonGsspTable(const CommonGsspTable &commonGsspTable)
+{
+    QSqlQuery query(m_SqlDB);
+    query.prepare("INSERT or REPLACE INTO commonGsspTable (gsspName, geneName, exonIndex, fOrR)"
+                  "VALUES (?,?,?,?)");
+    query.bindValue(0, commonGsspTable.gsspName);
+    query.bindValue(1, commonGsspTable.geneName);
+    query.bindValue(2, commonGsspTable.exonIndex);
+    query.bindValue(3, commonGsspTable.fOrR);
+    bool isSuccess = query.exec();
+    if(!isSuccess)
+    {
+        LOG_DEBUG("%s insert fail",commonGsspTable.gsspName.toStdString().c_str());
+    }
+}
+
+void SoapTypingDB::readCommonGsspTableTxt(const QString &txtFile)
+{
+    QFile file(txtFile);
+    if(file.open(QFile::ReadOnly))
+    {
+        deleteTable("commonGsspTable");
+        QTextStream stream(&file);
+        m_SqlDB.transaction();
+        while(!stream.atEnd())
+        {
+            QString line = stream.readLine();
+            QStringList part = line.split("\t");
+            if(part.size() == 4)
+            {
+                CommonGsspTable commonGsspTable;
+                commonGsspTable.gsspName = part.at(0);
+                commonGsspTable.geneName = part.at(1);
+                commonGsspTable.exonIndex = part.at(2);
+                commonGsspTable.fOrR = part.at(3);
+                insertCommonGsspTable(commonGsspTable);
+            }
+        }
+        file.close();
+        m_SqlDB.commit();
+    }
+}
+
+
+void SoapTypingDB::StartTransaction()
+{
+    m_SqlDB.transaction();
+}
+
+void SoapTypingDB::EndTransaction()
+{
+    m_SqlDB.commit();
 }

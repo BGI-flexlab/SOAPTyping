@@ -282,11 +282,9 @@ bool OpenFileDialog::AnalysisExonInfo(const QString &exonString, OpenFileTable &
         QMap<QString, ExonAndRF>::iterator it = m_map_ExonAndRF.find(exonString);
         if(it == m_map_ExonAndRF.end())
         {
-//            SoapTypingDB stdb;
-//            bool bRet = stdb.FindExonAndRFByGsspName(exonString,
-//                                                     openFileTable.exonIndex,
-//                                                     openFileTable.rOrF);
-//            return bRet;
+            return SoapTypingDB::GetInstance()->FindExonAndRFByGsspName(exonString,
+                                                     openFileTable.exonIndex,
+                                                     openFileTable.rOrF);
         }
         else
         {

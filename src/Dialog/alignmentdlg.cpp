@@ -308,9 +308,10 @@ void AlignPaintWgt::setSelectAlleles(const QMap<int, AlleleNameSeqPair> &mapPair
 
 
 
-AlignmentDlg::AlignmentDlg(QWidget *parent) :
+AlignmentDlg::AlignmentDlg(QWidget *parent,const QString &strver) :
     QDialog(parent),
-    ui(new Ui::AlignmentDlg)
+    ui(new Ui::AlignmentDlg),
+    m_str_genever(strver)
 {
     ui->setupUi(this);
     InitUI();
@@ -321,14 +322,21 @@ AlignmentDlg::AlignmentDlg(QWidget *parent) :
 AlignmentDlg::~AlignmentDlg()
 {
     delete ui;
+    if(m_pAlignPaintWgt)
+    {
+        delete m_pAlignPaintWgt;
+        m_pAlignPaintWgt = nullptr;
+    }
 }
 
 void AlignmentDlg::InitUI()
 {
-    QString windowTitle = QString("Soap Typing Allele Alignment (Version 3.2.6)");
+    QString windowTitle = QString("Soap Typing Allele Alignment (Version %1)").arg(m_str_genever);
     setWindowTitle(windowTitle);
 
     m_pAlignPaintWgt = new AlignPaintWgt(ui->scrollArea);
+
+    ui->listWidget->setSelectionMode(QAbstractItemView::MultiSelection);
 
     m_map_coden.insert("A", -24);
     m_map_coden.insert("B", -24);

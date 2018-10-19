@@ -153,7 +153,6 @@
    <addaction name="actionAllele_Comparator"/>
    <addaction name="actionAllele_Alignment"/>
    <addaction name="actionUpdate_Database"/>
-   <addaction name="menuSetting"/>
   </widget>
   <widget class="QToolBar" name="ToolBarPeak">
    <attribute name="toolBarArea">
@@ -250,6 +249,9 @@
    <property name="text">
     <string>Previous Mismatch Position</string>
    </property>
+   <property name="shortcut">
+    <string>Right</string>
+   </property>
   </action>
   <action name="actionBackward">
    <property name="icon">
@@ -258,6 +260,9 @@
    </property>
    <property name="text">
     <string>Next Mismatch Position</string>
+   </property>
+   <property name="shortcut">
+    <string>Left</string>
    </property>
   </action>
   <action name="actionApproval">
@@ -322,6 +327,9 @@
    </property>
    <property name="text">
     <string>Apply One</string>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
    </property>
   </action>
   <action name="actionApply_All">

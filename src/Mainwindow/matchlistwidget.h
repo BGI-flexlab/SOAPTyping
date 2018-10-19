@@ -25,6 +25,7 @@ private:
     void findUsefulGssp(const char *seq11, const char *seq12, const char *seq21, const char *seq22,
                         int exonStart, int exonEnd, QVector<GsspTable> &gsspTables,
                         QStringList &gssps, QStringList &infos);
+
 private slots:
     void slotClickIndelItem(QTableWidgetItem* itemNow);
     void slotRowChanged(QTableWidgetItem* itemNow);

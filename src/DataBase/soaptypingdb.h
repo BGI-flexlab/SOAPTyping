@@ -92,6 +92,7 @@ public:
     void getAlleleNameListFromStaticDabase(const QString &geneName, QStringList &alleleNames);
 
     void getGeneNames(QStringList &geneNames);
+    void getGeneVersion(QString &strver);
     void getExonTrimListByGeneName(const QString &geneName, QVector<ExonTrimTable> &exonTrimTableList);
     void updateExonTrim(const ExonTrimTable &exonTrimTable);
     void getAlleleNamesAndSeqsByGeneName(const QString &geneName, QStringList &alleleNames,
@@ -100,6 +101,20 @@ public:
 
     bool upDatabyChangebp(const QString &filename, const QString &streditinfo,bool isgssp);
     bool upDataExclude(bool isgssp, const QString &filename, int exclude_left, int exclude_right);
+    bool deleteTable(const QString &tableName);
+    void readGeneTableTxtFile(const QString &geneFile);
+    void insertGeneTable(const GeneTable &geneTable);
+    void readAlleleTableTxtFile(const QString &alleleFile);
+    void insertAlleleTable(const AlleleTable &alleleTable);
+    void readGsspTableTxtFile(const QString &gsspFile);
+    void insertGsspTable(const GsspTable &gsspTable);
+    void readLabAlignTableTxtFile(const QString &labAlignFile);
+    void insertLabAlignTable(const LabAlignTable &labAlignTable);
+    void readCommonGsspTableTxt(const QString &txtFile);
+    void insertCommonGsspTable(const CommonGsspTable &commonGsspTable);
+
+    void StartTransaction();
+    void EndTransaction();
 private:
     bool InitDB();
 
