@@ -104,3 +104,5 @@ RESOURCES += \
 RC_FILE += SoapTyping.rc
 
 DISTFILES += \
+
+mac:CONFIG -= app_bundle
