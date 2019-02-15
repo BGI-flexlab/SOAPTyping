@@ -6,14 +6,16 @@ SOAPTyping is a novel HLA genotyping tool capable of producing accurate predicti
 
 | Locus | exon|
 | :--- | :--- |
-| HLA-A	| 1,2,3,4,5 |
+| HLA-A	| 1,2,3,4,5,6 |
 | HLA-B	| 1,2,3,4,5 |
 | HLA-C	| 1,2,3,4,5,6,7 |
 | HLA-DRB1	| 1,2,3,4 |
 | HLA-DRB3,4,5	| 2,3 |
 | HLA-DQA1	| 1,2,3,4 |
-| HLA-DQB1	| 2,3 |
+| HLA-DQB1	| 1,2,3,4 |
 | HLA-DPB1	| 1,2,3,4 |
+| HLA-G	| 2,3,4 |
+| HLA-DPA1	| 1,2,3,4 |
 
 The Figure 1 is a snapshot of SOAPtyping. There are 6 function area:Toolbar, Base Navigator, Sequence display, Sample list display, Allele match list display and Electropherogram.
 
@@ -39,17 +41,27 @@ The recommended version of QT and QT creator you should download is :
 
 **notes:**
 1.  Don't forget to add the executes and librarys to your compute environment.
-2.  For windows, we recommend install QT with mingw, which had been tested by ourself.
+2.  For windows, we recommend install QT with mingw.
+3.  For Linux, you should choose the Desktop gcc-64bit & Tools when you intall the QT.
+4.  For Mac, you should choose the macOS & Tools when you install the QT.
 
 
 ### Complie from source code
 
-1.  Download the release for github
+1.  Download the release or clone the project from github
+
+#### Windows
 2.  Open the project with QT creator
 3.  Configure the C++ complier, debugger and QT complier in build and run section of QT creator.
 4.  Build the project.
 5.  Put the dependencies that you download from github into the execute program directory. Then you can run SoapTyping.
 
+#### Linux & Mac
+2.  cd ./src/
+3.  qmake -o Makefile HLA.pro
+4.  make
+5.  cp ./soaptyping ../dependence
+6.  ./soaptyping to run the SoapTyping
 ----
 
 ## Propositional Workflow
