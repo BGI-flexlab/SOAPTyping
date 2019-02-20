@@ -11,7 +11,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Export</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../hla.qrc">
+    <normaloff>:/png/images/about.png</normaloff>:/png/images/about.png</iconset>
   </property>
   <widget class="QLabel" name="label">
    <property name="geometry">
@@ -115,6 +119,8 @@
    </property>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="../hla.qrc"/>
+ </resources>
  <connections/>
 </ui>

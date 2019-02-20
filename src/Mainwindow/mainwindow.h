@@ -5,6 +5,7 @@
 #include <qscrollarea.h>
 #include <QTreeWidgetItem>
 #include <QTableWidgetItem>
+#include <QMessageBox>
 
 namespace Ui {
 class MainWindow;
@@ -80,6 +81,7 @@ public slots:
     void slotClearAll();//清空当前显示信息
 
     void slotPeakAct(int type);
+    void slotChangePeak(QString &str_file);
 private:
     Ui::MainWindow *ui;
     SampleTreeWidget *m_pSampleTreeWidget;
@@ -92,6 +94,15 @@ private:
     QString m_str_SelectSample;         //保存样品列表选中的样品名称
     QTreeWidgetItem *m_pSelectItem;     //保存样品列表选中的item
     QString m_str_GeneVer;              //保存基因表的版本号
+};
+
+class Tipbox : public QMessageBox
+{
+    Q_OBJECT
+public:
+    explicit Tipbox(QWidget *parent = nullptr);
+    ~Tipbox();
+    void doTask(const QString &str_samplename);
 };
 
 #endif // MAINWINDOW_H

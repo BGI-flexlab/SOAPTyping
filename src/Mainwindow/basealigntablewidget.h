@@ -21,6 +21,8 @@ private:
     void getTableHead(QStringList &head, int length, int start);
     void getTypeAlignResult(char *result, char *pattern, char *alleleSeq1, char *alleleSeq2, QSet<int> &misMatch,
                             int alignStart1, int alignStart2);
+    void updateTopTableViewGeometry();
+    void resizeEvent(QResizeEvent *event)Q_DECL_OVERRIDE;
 
 signals:
     void signalTypeMisMatchPosition(QSet<int> &typeMisMatchPositions, int type);
@@ -34,6 +36,7 @@ private:
     QString m_str_SampleName;
     QStringList m_sl_defaulthead;
     BaseAlignSampleInfo m_BaseAlignSampleInfo;
+    QTableView *m_topTableView;
 };
 
 #endif // BASEALIGNTABLEWIDGET_H

@@ -301,7 +301,7 @@ void ExonNavigatorWidget::SetSelectPos(int colnum, int &selectpos, int &exonstar
 }
 
 void ExonNavigatorWidget::setSelectFramePosition(int index, int &startpos, int &selectpos, int &exonstartpos)
-{
+{  
     foreach(const Exon &exon, m_vec_Exon)
     {
         if(exon.i_exonindex == index)

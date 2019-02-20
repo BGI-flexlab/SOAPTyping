@@ -159,6 +159,10 @@ void AnalysisAB1ThreadTask::run()
     {
         Core::GetInstance()->GetFileAlignResult(file_align_new, fileAlignResult, true);
         m_pFiletable->setUsefulSequence(fileAlignResult.sampleAlign);//保存的是consensus和raw_seq的最大公共子序列
+        if(fileAlignResult.isUnDefined)
+        {
+            qDebug()<<m_pFiletable->getFilePath()<<"isUnDefined";
+        }
         if(!m_pFiletable->getIsGssp())
         {
             m_pFiletable->setAlignResult(fileAlignResult.isUnDefined);

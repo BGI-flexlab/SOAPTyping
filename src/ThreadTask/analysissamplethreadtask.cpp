@@ -112,6 +112,11 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
     for(int i=0; i<alleleSize; i++){
         int mis = 0;
         const char *alleleSeq = alleleInfos.at(i).alleleSequence.data();
+        if(strlen(alleleSeq) < size)
+        {
+            qDebug()<<alleleInfos.at(i).alleleName;
+            continue;
+        }
         for(int j=0; j<size; j++){
 
             if(alleleSeq[j]=='*' ||patternSeq[j]=='-' || alleleSeq[j]=='.' || patternSeq[j]=='n' || patternSeq[j]=='.'){

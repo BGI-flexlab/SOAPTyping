@@ -198,6 +198,27 @@ void SampleTreeWidget::SetSelectItem(int index, const QString &str_sample)
     }
 }
 
+void SampleTreeWidget::SetSelectItemByName(const QString &str_sample, const QString &str_file)
+{
+    for(int i=0;i<topLevelItemCount();i++)
+    {
+        QString str_name = topLevelItem(i)->text(0);
+        if(str_name == str_sample)
+        {
+            for(int j = 0;j<topLevelItem(i)->childCount();j++)
+            {
+                QTreeWidgetItem *item = topLevelItem(i)->child(j);
+                if(item->text(0).contains(str_file))
+                {
+                    setCurrentItem(item);
+                    break;
+                }
+            }
+            break;
+        }
+    }
+}
+
 void SampleTreeWidget::markSampleType(int markType)
 {
     QTreeWidgetItem *item = m_pSelByRightItem;

@@ -10,6 +10,7 @@
 #include <set>
 #include "log/log.h"
 #include <QFontDatabase>
+#include <QToolTip>
 
 const int PEAKLINEHIGHT = 200;
 const int HLINEHIGHT = 20;
@@ -193,7 +194,7 @@ MultiPeakWidget::MultiPeakWidget(QWidget *parent)
     setFocusPolicy(Qt::StrongFocus);//如果不调用，keyPressEvent不响应
     CreateRightMenu();
     ConnectSignalandSlot();
-    loadFontFromFile();
+    //loadFontFromFile();
 }
 
 MultiPeakWidget::~MultiPeakWidget()
@@ -219,7 +220,7 @@ void MultiPeakWidget::ClearMultiPeak()
     m_index_PeakLine = 0;
 }
 
-void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index)
+void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index, const QString &str_file)
 {
     LOG_DEBUG("%s",str_samplename.toStdString().c_str());
     if(!m_bRefresh)
@@ -231,6 +232,14 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index)
         }
         else
         {
+            for(int i=0;i<m_vec_Peakline.size();i++)
+            {
+                if(m_vec_Peakline[i]->GetFileName() == str_file)
+                {
+                    m_index_PeakLine = i;
+                }
+            }
+            update();
             return;
         }
     }
@@ -255,6 +264,10 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index)
         long l_size = table.getSignalNumber();
         QSharedPointer<PeakLine> pPeakLine = QSharedPointer<PeakLine>(new PeakLine(l_size));
         pPeakLine->SetFileName(table.getFileName());
+        if(table.getFileName() == str_file)
+        {
+            m_index_PeakLine = i;
+        }
         pPeakLine->SetAlignPos(table.getAlignStartPos(), table.getAlignEndPos());
         pPeakLine->SetExcludePos(table.getExcludeLeft(), table.getExcludeRight());
         pPeakLine->SetGssp(table.getIsGssp());
@@ -497,22 +510,19 @@ void MultiPeakWidget::GetBaseColor(QPainter *pter, const QChar &base)
 
 void MultiPeakWidget::DrawPeakHead(QPainter *pter)
 {
-    QFont font_letter(m_str_fontName);
+    QFont font_letter("微软雅黑");
     font_letter.setPointSize(15);
     font_letter.setBold(true);
 
     QFont font_other;
     font_letter.setPointSize(13);
 
-    int height_total = 0;
     for(int i=0;i<m_vec_Peakline.size();i++)
     {
         int i_height = m_vec_Peakline[i]->getPeakHeight(); //每个峰图的高度
-        height_total += i_height;
-        int height_line = height_total - i_height;
 
         pter->setFont(font_other);
-        pter->drawText(3,15+i*height_line, m_vec_Peakline[i]->GetFileName());
+        pter->drawText(3,15+i*i_height, m_vec_Peakline[i]->GetFileName());
         int i_index = 0;
         foreach(const GeneLetter &letter, m_vec_Peakline[i]->GetGeneLetter())
         {
@@ -581,6 +591,7 @@ void MultiPeakWidget::mousePressEvent(QMouseEvent *event)
     {
         return;
     }
+
     QPoint pos = event->pos();
     m_bIsSelect = false;
 
@@ -599,6 +610,10 @@ void MultiPeakWidget::mousePressEvent(QMouseEvent *event)
             break;
         }
     }
+    emit SignalChangePeak(m_vec_Peakline[m_index_PeakLine]->GetFileName());
+
+    QPoint pos_tip = event->globalPos();
+    QToolTip::showText(pos_tip,m_vec_Peakline[m_index_PeakLine]->GetFileName());
 
     QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
     int left_exclude,right_exclude;

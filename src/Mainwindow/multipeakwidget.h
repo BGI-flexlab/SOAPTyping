@@ -83,7 +83,7 @@ class MultiPeakWidget:public QWidget
 public:
     MultiPeakWidget(QWidget *parent = nullptr);
     ~MultiPeakWidget();
-    void SetPeakData(const QString &str_samplename, int index);
+    void SetPeakData(const QString &str_samplename, int index, const QString &str_file);
     void SetSelectPos(int subpos);
     void AdjustPeakHeight(int height);
     void AdjustPeakY(int y);
@@ -134,6 +134,7 @@ signals:
     void signalPeakAct(int type);
     void signalSendStatusBarMsg(QString &msg);
     void signalChangeDBByFile(QVector<QString> &vec_samplename);
+    void SignalChangePeak(QString &str_file);
 private:
     QVector<Ab1FileTableBase> m_vec_filetable;
     bool m_bRefresh;

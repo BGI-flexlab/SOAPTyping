@@ -116,7 +116,46 @@ void BaseAlignTableWidget::InitUI()
     item(4, 0)->setText("  Consensus Alignment");
     item(5, 0)->setText("  Pattern Sequence");
 
+
+    m_topTableView = new QTableView(this);
+    m_topTableView->setFocusPolicy(Qt::NoFocus);
+    m_topTableView->verticalHeader()->hide();
+    m_topTableView->setModel(model());
+    m_topTableView->setStyleSheet("QTableView { border: none;}");
+    m_topTableView->horizontalHeader()->setFixedHeight(20);
+
+    for(int i=0;i<m_iRowNum;i++){
+        m_topTableView->setRowHeight(i,20);
+    }
+    m_topTableView->setColumnWidth(0,columnWidth(0));
+
+    m_topTableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_topTableView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    updateTopTableViewGeometry();
+
+    setVerticalScrollMode(ScrollPerPixel);
+    m_topTableView->setVerticalScrollMode(ScrollPerPixel);
+
+    connect(m_topTableView->verticalScrollBar(), &QAbstractSlider::valueChanged,
+                verticalScrollBar(), &QAbstractSlider::setValue);
+    connect(verticalScrollBar(), &QAbstractSlider::valueChanged,
+                m_topTableView->verticalScrollBar(), &QAbstractSlider::setValue);
 }
+
+void BaseAlignTableWidget::updateTopTableViewGeometry()
+{
+    m_topTableView->setGeometry(verticalHeader()->width()+frameWidth()
+                                ,frameWidth()
+                                ,columnWidth(0)
+                                ,viewport()->height()+horizontalHeader()->height());
+}
+
+void BaseAlignTableWidget::resizeEvent(QResizeEvent *event)
+{
+    QTableView::resizeEvent(event);
+    updateTopTableViewGeometry();
+}
+
 
 void BaseAlignTableWidget::ClearBaseAlignTable()
 {
