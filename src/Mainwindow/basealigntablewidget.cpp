@@ -48,6 +48,7 @@ void BaseAlignTableWidget::InitUI()
     QTableWidgetItem *itemArray = new QTableWidgetItem[m_iRowNum * m_iColNum];
     for(int i=0; i<m_iRowNum; i++)
     {
+        setRowHeight(i,20);
         for(int j=0; j<m_iColNum; j++)
         {
 
