@@ -361,7 +361,7 @@ void ExonNavigatorWidget::ActForward()
     {
         for(;itor != end; itor++)
         {
-            if(m_iSelectPeakPos < *itor)
+            if(m_iSelectPeakPos <= *itor)
             {
                 m_iSelectPeakPos = *itor+1;
                 break;

@@ -279,7 +279,7 @@ void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
     LOG_DEBUG("%d %d %d %d",index_exon, startpos, selectpos, exonstartpos);
 
     int i_columnPos = selectpos - startpos;
-    int sliderPos = i_columnPos*25-20;
+    int sliderPos = i_columnPos*25-30;
     m_pBaseAlignTableWidget->selectColumn(i_columnPos);
     m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
 
@@ -292,7 +292,7 @@ void MainWindow::slotExonFocusPosition(int startpos, int selectpos, int exonstar
 {
     LOG_DEBUG("%d %d %d %d",startpos, selectpos, exonstartpos, index);
     int i_columnPos = selectpos - startpos; //二者之差为表格的第几列
-    int sliderPos = i_columnPos*25+8;
+    int sliderPos = i_columnPos*25-8;
     m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
     m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
 
@@ -308,6 +308,7 @@ void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
     int exonstartpos;
     int index;
 
+
     int i_colnum = item->column();
     QTableWidgetItem *item_first = item->tableWidget()->item(0,i_colnum);
     if(i_colnum < 1 || item_first->text().isEmpty())
@@ -315,22 +316,26 @@ void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
         return;
     }
 
+    QPoint pp = QCursor::pos();
+    qDebug()<<__func__<<pp<<m_pBaseAlignTableWidget->mapToGlobal(pp);
+
     m_pExonNavigatorWidget->SetSelectPos(i_colnum, selectpos, exonstartpos ,index);
     LOG_DEBUG("%d %d %d %d",i_colnum, selectpos, exonstartpos ,index);
 
     int i_sub = selectpos - exonstartpos;
     m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
-    m_pMultiPeakWidget->SetSelectPos(i_sub);
+    m_pMultiPeakWidget->SetSelectPos(i_sub, pp.x());
 }
 
 void MainWindow::slotPeakFocusPosition(int index, int colnum)
 {
-    LOG_DEBUG("%d %d",index, colnum);
+    //LOG_DEBUG("%d %d",index, colnum);
     int i_columnPos;
     m_pExonNavigatorWidget->SetSelectFramePos(index, colnum,i_columnPos);
     m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
-    m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(i_columnPos*25+8);
+    m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(i_columnPos*25-230);
+    //m_pBaseAlignTableWidget->scrollToItem(m_pBaseAlignTableWidget->item(0,i_columnPos+1));
 }
 
 void MainWindow::slotChangePeak(QString &str_file)

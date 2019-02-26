@@ -52,6 +52,12 @@ public:
 
     void setPeakHeight(int height);
     int getPeakHeight();
+
+    void setXLeft(int x);
+    int getXLeft();
+
+    void setDelpos(int pos);
+    QVector<int> &getDelpos();
 private:
     bool m_bGssp;
     int m_left_exclude;
@@ -61,6 +67,8 @@ private:
 
     int m_y_step;            //y轴间距
     int m_iPeakHeight;      //峰图实际高度
+
+    int m_x_left;           //保存左边距离exon的长度
 
     long m_lsize;
     long m_loffset;
@@ -72,6 +80,7 @@ private:
     QPolygonF m_vec_baseG;
     QPolygonF m_vec_baseC;
     QVector<GeneLetter> m_vec_GeneLetter;
+    QVector<int> m_vec_del;
 };
 
 
@@ -84,7 +93,7 @@ public:
     MultiPeakWidget(QWidget *parent = nullptr);
     ~MultiPeakWidget();
     void SetPeakData(const QString &str_samplename, int index, const QString &str_file);
-    void SetSelectPos(int subpos);
+    void SetSelectPos(int subpos,int x=0);
     void AdjustPeakHeight(int height);
     void AdjustPeakY(int y);
     void AdjustPeakX(int x);
@@ -149,6 +158,10 @@ private:
     int m_iPeakHeightTotal;   //所有峰图的高度之和
     QString m_str_SampleName;//样品名称
     int m_index_Exon;        //碱基index
+    int m_maxleft;    //记录左边界最大值
+    int m_start_exon;
+    int m_end_exon;
+    int m_x_index;  //记录以startexon为起点的下标
     QVector<QSharedPointer<PeakLine>> m_vec_Peakline;
     QString m_str_fontName;
     QMenu *m_pRightMenu;

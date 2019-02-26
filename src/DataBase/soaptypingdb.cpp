@@ -827,6 +827,8 @@ void SoapTypingDB::getAlldataFormRealTime(const QString &sampleName, int exonInd
             table.setIsGssp(false);
             table.setFileName(query.value(0).toString());
             table.setExonStartPos(query.value(7).toInt());
+            table.setExonEndPos(query.value(8).toInt());
+            table.setUsefulSequence(query.value(9).toByteArray());
             table.setBaseSequence(query.value(10).toByteArray());
             table.setBasePostion(query.value(11).toString());
             table.setBaseQuality(query.value(12).toString());
@@ -861,7 +863,9 @@ void SoapTypingDB::getAlldataFormRealTime(const QString &sampleName, int exonInd
             Ab1FileTableBase table;
             table.setIsGssp(true);
             table.setFileName(query_gssp.value(0).toString());
-            table.setExonStartPos(query.value(7).toInt());
+            table.setExonStartPos(query_gssp.value(7).toInt());
+            table.setExonEndPos(query_gssp.value(8).toInt());
+            table.setUsefulSequence(query_gssp.value(9).toByteArray());
             table.setBaseSequence(query_gssp.value(10).toByteArray());
             table.setBasePostion(query_gssp.value(11).toString());
             table.setBaseQuality(query_gssp.value(12).toString());
@@ -872,7 +876,7 @@ void SoapTypingDB::getAlldataFormRealTime(const QString &sampleName, int exonInd
             table.setBaseCSignal(query_gssp.value(17).toString());
             table.setSignalNumber(query_gssp.value(18).toInt());
             table.setMaxSignal(query_gssp.value(19).toInt());
-            table.setAverageBaseWidth(query.value(21).toFloat());
+            table.setAverageBaseWidth(query_gssp.value(21).toFloat());
             table.setAlignStartPos(query_gssp.value(24).toInt());
             table.setAlignEndPos(query_gssp.value(25).toInt());
             table.setEditInfo(query_gssp.value(29).toString());
