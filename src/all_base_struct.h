@@ -5,6 +5,7 @@
 #include <QSet>
 #include <QVector>
 #include <QMap>
+#include <QMetaType>
 
 enum MarkType
 {
@@ -315,6 +316,21 @@ struct CommonGsspTable
     QString exonIndex;
     QString fOrR;
 };
+
+
+typedef struct _tagOpenFileTable
+{
+    bool right;
+    QString sampleName;
+    QString geneName;
+    QString gsspName;
+    QString fileName;
+    QString exonIndex;
+    QString rOrF;
+    QString filePath;
+}OpenFileTable;
+Q_DECLARE_METATYPE(OpenFileTable);
+
 
 #endif // ALL_BASE_STRUCT_H
 

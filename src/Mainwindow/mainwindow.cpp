@@ -181,10 +181,16 @@ void MainWindow::DisConnectSignalandSolt()
 void MainWindow::InitData()
 {
     SoapTypingDB::GetInstance()->getGeneVersion(m_str_GeneVer);
+#ifndef QT_NO_DEBUG
     if(!m_str_GeneVer.isEmpty()) //如果m_str_GeneVer不为空,则认为getetable不为空
     {
         m_pSampleTreeWidget->SetTreeData();
     }
+#else
+    SoapTypingDB::GetInstance()->deleteTable("fileTable");
+    SoapTypingDB::GetInstance()->deleteTable("gsspFileTable");
+    SoapTypingDB::GetInstance()->deleteTable("sampleTable");
+#endif
 }
 
 void MainWindow::slotShowOpenDlg()
@@ -271,7 +277,6 @@ void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
     }
     m_pMultiPeakWidget->SetPeakData(str_sample,index_exon, m_str_SelectFile);
 
-
     int startpos=0;
     int selectpos=0;
     int exonstartpos=0;
@@ -284,7 +289,7 @@ void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
     m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
 
     int i_sub = selectpos - exonstartpos;
-    m_pMultiPeakWidget->SetSelectPos(i_sub);
+    m_pMultiPeakWidget->SetSelectPos(i_sub,270);
 }
 
 //导航条起始pos,选中的峰图pos，选中的导航条起始pos,选中的导航条index
@@ -299,7 +304,7 @@ void MainWindow::slotExonFocusPosition(int startpos, int selectpos, int exonstar
     int i_sub = selectpos - exonstartpos;
     m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
-    m_pMultiPeakWidget->SetSelectPos(i_sub);
+    m_pMultiPeakWidget->SetSelectPos(i_sub,270);
 }
 
 void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
@@ -316,8 +321,8 @@ void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
         return;
     }
 
-    QPoint pp = QCursor::pos();
-    qDebug()<<__func__<<pp<<m_pBaseAlignTableWidget->mapToGlobal(pp);
+    int sli = m_pBaseAlignTableWidget->horizontalScrollBar()->sliderPosition();
+    int xx = i_colnum*25+240 - sli;
 
     m_pExonNavigatorWidget->SetSelectPos(i_colnum, selectpos, exonstartpos ,index);
     LOG_DEBUG("%d %d %d %d",i_colnum, selectpos, exonstartpos ,index);
@@ -325,17 +330,17 @@ void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
     int i_sub = selectpos - exonstartpos;
     m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
-    m_pMultiPeakWidget->SetSelectPos(i_sub, pp.x());
+    m_pMultiPeakWidget->SetSelectPos(i_sub, xx);
 }
 
-void MainWindow::slotPeakFocusPosition(int index, int colnum)
+void MainWindow::slotPeakFocusPosition(int index, int colnum, QPoint &pos)
 {
     //LOG_DEBUG("%d %d",index, colnum);
     int i_columnPos;
     m_pExonNavigatorWidget->SetSelectFramePos(index, colnum,i_columnPos);
     m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
-    m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(i_columnPos*25-230);
-    //m_pBaseAlignTableWidget->scrollToItem(m_pBaseAlignTableWidget->item(0,i_columnPos+1));
+    int table_pos = i_columnPos*25+240-pos.rx();
+    m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(table_pos);
 }
 
 void MainWindow::slotChangePeak(QString &str_file)

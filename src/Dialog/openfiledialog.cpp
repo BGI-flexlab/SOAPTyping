@@ -7,6 +7,7 @@
 #include "Core/Ab1.h"
 #include "ThreadTask/analysisab1threadtask.h"
 #include "ThreadTask/analysissamplethreadtask.h"
+#include "ThreadTask/fileprocessthreadtask.h"
 #include "Core/fileTablebase.h"
 #include "Core/core.h"
 
@@ -21,6 +22,7 @@ OpenFileDialog::OpenFileDialog(QWidget *parent) :
     InitData();
     ConnectSignalandSlot();
     m_iPrgvalue = 1;
+    qRegisterMetaType<OpenFileTable>("OpenFileTable&");
 }
 
 OpenFileDialog::~OpenFileDialog()
@@ -44,17 +46,38 @@ void OpenFileDialog::InitUi()
     ui->tableWidget->setColumnWidth(5, 250);
     ui->tableWidget->setColumnWidth(6, 390);
 
-    //ui->btnAnalysis->setEnabled(false);
-    //ui->btnDel->setEnabled(false);
+    ui->btnAnalysis->setEnabled(false);
+    ui->btnDel->setEnabled(false);
+
+    m_geneNames_ptr = new QListWidget(this);
+    m_gsspNames_ptr = new QListWidget(this);
+    m_exonNames_ptr = new QListWidget(this);
+    m_ROrFNames_ptr = new QListWidget(this);
+
+    m_geneNames_ptr->setMaximumSize(60, 250);
+    m_gsspNames_ptr->setMaximumSize(60, 250);
+    m_exonNames_ptr->setMaximumSize(60, 250);
+    m_ROrFNames_ptr->setMaximumSize(60, 250);
+
+    m_geneNames_ptr->hide();
+    m_gsspNames_ptr->hide();
+    m_exonNames_ptr->hide();
+    m_ROrFNames_ptr->hide();
 }
 
 void OpenFileDialog::InitData()
 {
-    m_geneNames_List<<"A"<<"B"<<"C"<<"DPA1"<<"DPB1"<<"DQA1"<<"DQB1"<<"DRB1"<<"DRB3"<<"DRB4"<<"DRB5"<<"G";
-    m_exonNames_List<<"1"<<"2"<<"3"<<"4"<<"5"<<"6"<<"7"<<"8";
-    m_ROrFNames_List<<"F"<<"R";
+    m_geneNames_List<<""<<"A"<<"B"<<"C"<<"DPA1"<<"DPB1"<<"DQA1"<<"DQB1"<<"DRB1"<<"DRB3"<<"DRB4"<<"DRB5"<<"G";
+    m_exonNames_List<<""<<"1"<<"2"<<"3"<<"4"<<"5"<<"6"<<"7"<<"8";
+    m_ROrFNames_List<<""<<"F"<<"R";
+    m_gsspNames_List<<"";
     SoapTypingDB::GetInstance()->GetGsspNames(m_gsspNames_List);
     SoapTypingDB::GetInstance()->GetGsspMapToExonAndFR(m_map_ExonAndRF);
+
+    m_geneNames_ptr->addItems(m_geneNames_List);
+    m_gsspNames_ptr->addItems(m_gsspNames_List);
+    m_exonNames_ptr->addItems(m_exonNames_List);
+    m_ROrFNames_ptr->addItems(m_ROrFNames_List);
 }
 
 void OpenFileDialog::ConnectSignalandSlot()
@@ -64,6 +87,12 @@ void OpenFileDialog::ConnectSignalandSlot()
     connect(ui->btnCancel, &QPushButton::clicked, this, &OpenFileDialog::close);
     connect(ui->checkBox,&QCheckBox::stateChanged, this, &OpenFileDialog::SlotCheckAll);
     connect(ui->btnDel, &QPushButton::clicked, this, &OpenFileDialog::SlotDelSelect);
+
+    connect(ui->tableWidget, &QTableWidget::cellClicked, this, &OpenFileDialog::showPopupList);
+    connect(m_geneNames_ptr, &QListWidget::itemClicked, this, &OpenFileDialog::changetableitem);
+    connect(m_gsspNames_ptr, &QListWidget::itemClicked, this, &OpenFileDialog::changetableitem);
+    connect(m_exonNames_ptr, &QListWidget::itemClicked, this, &OpenFileDialog::changetableitem);
+    connect(m_ROrFNames_ptr, &QListWidget::itemClicked, this, &OpenFileDialog::changetableitem);
 }
 
 void OpenFileDialog::SlotOpenFile()
@@ -76,27 +105,21 @@ void OpenFileDialog::SlotOpenFile()
     if(!filePathList.empty())
     {
         Core::GetInstance()->SetConfig("Path/OpenDir", filePathList[0]);
-        ui->progressBar->setRange(0, filePathList.size());
-        FilePathListProcess(filePathList);
-        ui->progressBar->reset();
-        ui->btnAnalysis->setEnabled(true);
-        int i_Row = ui->tableWidget->rowCount();
-        int i_samplesize = m_set_sample.size();
-        ui->btnStatus->setText(QString("F:%1/S:%2 Ready").arg(i_Row).arg(i_samplesize));
+        m_iOpenfile = filePathList.size();
+        ui->progressBar->setRange(0, m_iOpenfile);
 
-        //emit signalGetNumbers();
+        fileprocessthreadtask *task = new fileprocessthreadtask(filePathList, m_map_ExonAndRF);
+        connect(task, &fileprocessthreadtask::processone, this, &OpenFileDialog::slotprocessone);
+        QThreadPool::globalInstance()->start(task);
     }
 }
 
 bool SetAb1FileTable(QTableWidget *tablewidget,int i, Ab1FileTableBase &filetable)
 {
     QString str_samplename = tablewidget->item(i, 0)->text();
-    QComboBoxNew *pbox = static_cast<QComboBoxNew*>(tablewidget->cellWidget(i, 1));
-    QString str_geneName = pbox->currentText();
-    pbox = static_cast<QComboBoxNew*>(tablewidget->cellWidget(i, 3));
-    int i_exonIndex = pbox->currentText().toInt();
-    pbox = static_cast<QComboBoxNew*>(tablewidget->cellWidget(i, 4));
-    char c_rOrF = pbox->currentText().at(0).toLatin1();
+    QString str_geneName = tablewidget->item(i,1)->text();
+    int i_exonIndex = tablewidget->item(i, 3)->text().toInt();
+    QChar c_rOrF = tablewidget->item(i, 4)->text().at(0);
     QString str_fileName = tablewidget->item(i, 5)->text();
     QString str_filePath = tablewidget->item(i, 6)->text();
 
@@ -125,15 +148,14 @@ void OpenFileDialog::SlotAnalysisFile()
     ui->progressBar->setRange(0,i_Row+i_samplesize);
     for(int i=0; i<i_Row; i++)
     {
-        QComboBoxNew *pbox = static_cast<QComboBoxNew*>(ui->tableWidget->cellWidget(i, 4));
-        QString str_RF = pbox->currentText();
+        QString str_RF = ui->tableWidget->item(i,4)->text();
         if(str_RF.isEmpty()) //无法分析的文件，跳过
         {
             SetProcessbarValue();
             continue;
         }
-        pbox = static_cast<QComboBoxNew*>(ui->tableWidget->cellWidget(i, 2));
-        QString str_gsspname = pbox->currentText();
+
+        QString str_gsspname = ui->tableWidget->item(i, 2)->text();
         if(str_gsspname.isEmpty()) //普通的ab1文件
         {
             Ab1FileTableBase *pAb1filetable = new Ab1NormalFileTable;
@@ -154,147 +176,6 @@ void OpenFileDialog::SlotAnalysisFile()
             QThreadPool::globalInstance()->start(task);
         }
     }
-}
-
-void OpenFileDialog::FilePathListProcess(const QStringList &filePathList)
-{
-    for(int i=0; i<filePathList.size(); i++)
-    {
-        FilePathProcess(filePathList.at(i));
-        ui->progressBar->setValue(i+1);
-        //QCoreApplication::processEvents();
-    }
-}
-
-void OpenFileDialog::FilePathProcess(const QString &filePath)
-{
-    OpenFileTable openFileTable;
-    bool isOK = AnalysisFileName(filePath, openFileTable);
-    if(isOK)
-    {
-        AddRowToTableWidget(openFileTable);
-    }
-}
-
-bool OpenFileDialog::AnalysisFileName(const QString &filePath, OpenFileTable &openFileTable)
-{
-    openFileTable.filePath  = filePath;
-    QFileInfo fileInfo(filePath);
-    openFileTable.fileName = fileInfo.fileName();
-    if(!m_set_File.contains(openFileTable.fileName)) //文件集合不包含指定文件
-    {
-        QStringList part = openFileTable.fileName.split("_");
-        if(part.size() != 4)
-        {
-            openFileTable.right = false;
-        }
-        else
-        {
-            openFileTable.sampleName = part.at(0);
-            openFileTable.geneName = part.at(1);
-            m_set_sample.insert(openFileTable.sampleName);
-            bool isRight = AnalysisExonInfo(part.at(2), openFileTable);
-            if(!isRight)
-            {
-                openFileTable.right = false;
-            }
-        }
-        m_set_File.insert(openFileTable.fileName);
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-void OpenFileDialog::AddRowToTableWidget(const OpenFileTable &openFileTable)
-{
-    int iRow = ui->tableWidget->rowCount();
-    ui->tableWidget->setRowCount(iRow+1);
-    ui->tableWidget->setRowHeight(iRow, 18);
-
-    QTableWidgetItem *item0 = new QTableWidgetItem;
-    item0->setCheckState(Qt::Unchecked);
-    item0->setText(openFileTable.sampleName);
-    if(!openFileTable.right)
-    {
-        item0->setBackgroundColor(QColor(230,230,230));
-    }
-    ui->tableWidget->setItem(iRow, 0, item0);
-
-    QComboBoxNew *box1 = new QComboBoxNew;
-    box1->addItems(m_geneNames_List);
-    SetComboBoxData(box1, openFileTable.geneName);
-    ui->tableWidget->setCellWidget(iRow, 1, box1);
-
-    QComboBoxNew *box2 = new QComboBoxNew;
-    box2->addItems(m_gsspNames_List);
-    SetComboBoxData(box2, openFileTable.gsspName);
-    ui->tableWidget->setCellWidget(iRow, 2, box2);
-
-    QComboBoxNew *box3 = new QComboBoxNew;
-    box3->addItems(m_exonNames_List);
-    SetComboBoxData(box3, openFileTable.exonIndex);
-    ui->tableWidget->setCellWidget(iRow, 3, box3);
-
-    QComboBoxNew *box4 = new QComboBoxNew;
-    box4->addItems(m_ROrFNames_List);
-    SetComboBoxData(box4, openFileTable.rOrF);
-    ui->tableWidget->setCellWidget(iRow, 4, box4);
-    ui->tableWidget->cellWidget(iRow, 4)->backgroundRole();
-
-    QTableWidgetItem *item5 = new QTableWidgetItem;
-    item5->setText(openFileTable.fileName);
-    if(!openFileTable.right)
-    {
-        item5->setBackgroundColor(QColor(230,230,230));
-    }
-    ui->tableWidget->setItem(iRow, 5, item5);
-
-    QTableWidgetItem *item6 = new QTableWidgetItem;
-    item6->setText(openFileTable.filePath);
-    if(!openFileTable.right)
-    {
-        item6->setBackgroundColor(QColor(230,230,230));
-    }
-    ui->tableWidget->setItem(iRow, 6, item6);
-}
-
-void OpenFileDialog::SetComboBoxData(QComboBoxNew *box, const QString &text)
-{
-    int index = box->findText(text);
-    box->setCurrentIndex(index);
-}
-
-bool OpenFileDialog::AnalysisExonInfo(const QString &exonString, OpenFileTable &openFileTable)
-{
-    QChar RF = exonString.at(1);
-    if((RF==QChar('R') || RF==QChar('F')) && exonString.size() == 2)
-    {
-        openFileTable.exonIndex = exonString.at(0);
-        openFileTable.rOrF = exonString.at(1);
-        openFileTable.gsspName = "";
-        return true;
-    }
-    else
-    {
-        QMap<QString, ExonAndRF>::iterator it = m_map_ExonAndRF.find(exonString);
-        if(it == m_map_ExonAndRF.end())
-        {
-            return SoapTypingDB::GetInstance()->FindExonAndRFByGsspName(exonString,
-                                                     openFileTable.exonIndex,
-                                                     openFileTable.rOrF);
-        }
-        else
-        {
-            openFileTable.gsspName = exonString;
-            openFileTable.exonIndex = it.value().exonIndex;
-            openFileTable.rOrF = it.value().rOrF;
-            return true;
-        }
-    }
-    return false;
 }
 
 void OpenFileDialog::SetProcessbarValue()
@@ -339,5 +220,149 @@ void OpenFileDialog::SlotDelSelect()
             ui->tableWidget->removeRow(i);
         }
     }
-    //emit signalGetNumbers();
+    i_Row = ui->tableWidget->rowCount();
+    for(int i=0;i<i_Row;i++)
+    {
+        QString str_sample = ui->tableWidget->item(i, 0)->text();
+        m_set_sample.insert(str_sample);
+    }
+    ui->btnStatus->setText(QString("F:%1/S:%2 Ready").arg(m_set_File.size()).arg(m_set_sample.size()));
+}
+
+
+void OpenFileDialog::AddRowToTableWidget_s(const OpenFileTable &openFileTable)
+{
+    int iRow = ui->tableWidget->rowCount();
+    ui->tableWidget->setRowCount(iRow+1);
+    ui->tableWidget->setRowHeight(iRow, 18);
+
+    QTableWidgetItem *item0 = new QTableWidgetItem;
+    item0->setCheckState(Qt::Unchecked);
+    item0->setText(openFileTable.sampleName);
+    if(!openFileTable.right)
+    {
+        item0->setBackgroundColor(QColor(230,230,230));
+    }
+    ui->tableWidget->setItem(iRow, 0, item0);
+
+    QTableWidgetItem *item1 = new QTableWidgetItem;
+    item1->setText(openFileTable.geneName);
+    ui->tableWidget->setItem(iRow, 1, item1);
+
+    QTableWidgetItem *item2 = new QTableWidgetItem;
+    item2->setText(openFileTable.gsspName);
+    ui->tableWidget->setItem(iRow, 2, item2);
+
+    QTableWidgetItem *item3 = new QTableWidgetItem;
+    item3->setText(openFileTable.exonIndex);
+    ui->tableWidget->setItem(iRow, 3, item3);
+
+    QTableWidgetItem *item4 = new QTableWidgetItem;
+    item4->setText(openFileTable.rOrF);
+    ui->tableWidget->setItem(iRow, 4, item4);
+
+    QTableWidgetItem *item5 = new QTableWidgetItem;
+    item5->setText(openFileTable.fileName);
+    if(!openFileTable.right)
+    {
+        item5->setBackgroundColor(QColor(230,230,230));
+    }
+    ui->tableWidget->setItem(iRow, 5, item5);
+
+    QTableWidgetItem *item6 = new QTableWidgetItem;
+    item6->setText(openFileTable.filePath);
+    if(!openFileTable.right)
+    {
+        item6->setBackgroundColor(QColor(230,230,230));
+    }
+    ui->tableWidget->setItem(iRow, 6, item6);
+}
+
+
+void OpenFileDialog::slotprocessone(const OpenFileTable &info)
+{
+    ui->progressBar->setValue(m_iPrgvalue);
+
+    if(!m_set_File.contains(info.fileName))
+    {
+        m_set_File.insert(info.fileName);
+        AddRowToTableWidget_s(info);
+    }
+    if(m_iPrgvalue == m_iOpenfile)
+    {
+        m_iPrgvalue = 1;
+        int i_Row = ui->tableWidget->rowCount();
+        for(int i=0;i<i_Row;i++)
+        {
+            QString str_sample = ui->tableWidget->item(i, 0)->text();
+            m_set_sample.insert(str_sample);
+        }
+        ui->progressBar->reset();
+        ui->btnAnalysis->setEnabled(true);
+        ui->btnDel->setEnabled(true);
+        ui->btnStatus->setText(QString("F:%1/S:%2 Ready").arg(i_Row).arg(m_set_sample.size()));
+    }
+    else
+    {
+       m_iPrgvalue++;
+    }
+}
+
+void OpenFileDialog::showPopupList(int row, int column)
+{
+    m_geneNames_ptr->hide();
+    m_gsspNames_ptr->hide();
+    m_exonNames_ptr->hide();
+    m_ROrFNames_ptr->hide();
+
+    int x = ui->tableWidget->columnViewportPosition(column);
+    int y = ui->tableWidget->rowViewportPosition(row)+30;
+    m_tableitem_ptr = ui->tableWidget->item(row,column);
+    QPoint pos(x,y);
+    switch (column) {
+    case 1:
+    {
+        m_geneNames_ptr->move(pos);
+        m_geneNames_ptr->show();
+        break;
+    }
+    case 2:
+    {
+        m_gsspNames_ptr->move(pos);
+        m_gsspNames_ptr->show();
+        break;
+    }
+    case 3:
+    {
+        m_exonNames_ptr->move(pos);
+        m_exonNames_ptr->show();
+        break;
+    }
+    case 4:
+    {
+        m_ROrFNames_ptr->move(pos);
+        m_ROrFNames_ptr->show();
+        break;
+    }
+    }
+}
+
+void OpenFileDialog::changetableitem(QListWidgetItem *item)
+{
+    m_tableitem_ptr->setText(item->text());
+    int column = m_tableitem_ptr->column();
+    switch (column) {
+    case 1:
+        m_geneNames_ptr->hide();
+        break;
+    case 2:
+        m_gsspNames_ptr->hide();
+        break;
+    case 3:
+        m_exonNames_ptr->hide();
+        break;
+    case 4:
+        m_ROrFNames_ptr->hide();
+        break;
+    }
 }

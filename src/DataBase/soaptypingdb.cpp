@@ -108,13 +108,27 @@ void SoapTypingDB::GetGsspMapToExonAndFR(QMap<QString, ExonAndRF> &mapToExonAndF
             mapToExonAndFR.insert(query.value(0).toString(), exonAndRF);
         }
     }
+
+    query.prepare("SELECT gsspName, exonIndex,fOrR FROM commonGsspTable");
+    query.prepare(str_sql);
+    isSuccess = query.exec();
+    if(isSuccess)
+    {
+        if(query.next())
+        {
+            ExonAndRF exonAndRF;
+            exonAndRF.exonIndex = query.value(1).toString();
+            exonAndRF.rOrF = query.value(2).toString();
+            mapToExonAndFR.insert(query.value(0).toString(), exonAndRF);
+        }
+    }
 }
 
 void SoapTypingDB::GetExonInfo(const QString &gene_name, int exon_index, ExonInfoS& exonInfo)
 {
     QMutexLocker locker(&g_mutex);
     QSqlQuery query(m_SqlDB);
-    query.prepare("SELECT geneSequence,exonPositionIndex FROM oldGeneTable WHERE geneName = ?");
+    query.prepare("SELECT geneSequence,exonPositionIndex FROM GeneTable WHERE geneName = ?");
     query.bindValue(0, gene_name);
     bool isSuccess = query.exec();
     if (isSuccess)
@@ -437,9 +451,9 @@ void SoapTypingDB::modifySequence(QByteArray &sequence, QSet<int> &editPostion, 
         for(int i=0; i<edits.size(); i++)
         {
             QStringList posBase = edits.at(i).split(":", QString::SkipEmptyParts);
-            int pos = posBase.at(0).toInt();
-            sequence[pos-exonStartPos] = posBase.at(1).at(0).toLatin1();
-            editPostion.insert(pos);
+            int pos = posBase.at(1).toInt()-exonStartPos;
+            sequence[pos] = posBase.at(2).at(0).toLatin1();
+            editPostion.insert(posBase.at(1).toInt());
         }
     }
     if(excludeLeft > 0)
@@ -879,6 +893,8 @@ void SoapTypingDB::getAlldataFormRealTime(const QString &sampleName, int exonInd
             table.setAverageBaseWidth(query_gssp.value(21).toFloat());
             table.setAlignStartPos(query_gssp.value(24).toInt());
             table.setAlignEndPos(query_gssp.value(25).toInt());
+            table.setExcludeLeft(query_gssp.value(27).toInt());
+            table.setExcludeRight(query_gssp.value(28).toInt());
             table.setEditInfo(query_gssp.value(29).toString());
 
             vec_filetable.push_back(table);
@@ -1949,6 +1965,7 @@ void SoapTypingDB::readGsspTableTxtFile(const QString &gsspFile)
     if(file.open(QFile::ReadOnly))
     {
         QTextStream stream(&file);
+        deleteTable("gsspTable");
         m_SqlDB.transaction();
         while(!stream.atEnd())
         {
@@ -1958,13 +1975,31 @@ void SoapTypingDB::readGsspTableTxtFile(const QString &gsspFile)
             {
                 GsspTable gsspTable;
                 gsspTable.gsspName = part.at(0);
-                gsspTable.geneName = part.at(1);
                 gsspTable.exonIndex = part.at(2).toInt();
                 gsspTable.rOrF = part.at(3);
                 gsspTable.position = part.at(4).toInt();
                 gsspTable.base = part.at(5).toLatin1();
-                gsspTable.gsspKey = gsspTable.gsspName+"_"+gsspTable.geneName;
-                insertGsspTable(gsspTable);
+
+
+                QString str_tmp = part.at(1);
+                if(str_tmp.contains(':'))
+                {
+                    qDebug()<<str_tmp;
+                    QStringList str_gene_list = str_tmp.split(':');
+                    foreach(const QString &name, str_gene_list)
+                    {
+                        gsspTable.geneName = name;
+                        gsspTable.gsspKey = gsspTable.gsspName+"_"+gsspTable.geneName;
+                        qDebug()<<name;
+                        insertGsspTable(gsspTable);
+                    }
+                }
+                else
+                {
+                    gsspTable.geneName = str_tmp;
+                    gsspTable.gsspKey = gsspTable.gsspName+"_"+gsspTable.geneName;
+                    insertGsspTable(gsspTable);
+                }
             }
         }
         file.close();

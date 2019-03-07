@@ -23,7 +23,8 @@ private:
                             int alignStart1, int alignStart2);
     void updateTopTableViewGeometry();
     void resizeEvent(QResizeEvent *event)Q_DECL_OVERRIDE;
-
+    void slotsliderPressed();
+    void slotsliderReleased();
 signals:
     void signalTypeMisMatchPosition(QSet<int> &typeMisMatchPositions, int type);
 private:

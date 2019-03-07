@@ -35,7 +35,7 @@ public slots:
     void slotSampleTreeItemChanged(QTreeWidgetItem *item, int col);
     void slotExonFocusPosition(int startpos, int selectpos, int exonstartpos, int index);
     void slotAlignTableFocusPosition(QTableWidgetItem *item);
-    void slotPeakFocusPosition(int index, int colnum);
+    void slotPeakFocusPosition(int index, int colnum, QPoint &pos);
 
     void slotShowSaveDlg();
     void slotShowLoadFileDlg();

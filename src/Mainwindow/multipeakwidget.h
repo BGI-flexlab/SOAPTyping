@@ -135,7 +135,7 @@ private slots:
 
 signals:
     //index:当前导航条index colnum：选中的位置和left_exclude的差值
-    void signalPeakFocusPosition(int index, int colnum);
+    void signalPeakFocusPosition(int index, int colnum, QPoint &pos);
     void signalChangeDB(const QString &str_samplename);
 //    void signalActApplyOne();
 //    void signalActApplyAll();

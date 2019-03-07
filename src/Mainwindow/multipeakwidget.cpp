@@ -464,10 +464,10 @@ void MultiPeakWidget::SetPeakLineData()
                 foreach(QStringRef str, editinfo)
                 {
                     QVector<QStringRef> temp = str.split(':');
-                    int editpos = temp[0].toInt() - table.getExonStartPos()+table.getAlignStartPos();
+                    int editpos = temp[0].toInt();// - table.getExonStartPos()+table.getAlignStartPos();
                     GeneLetter &geneletter = pPeakLine->GetGeneLetter()[editpos];
                     geneletter.oldtype = geneletter.type;
-                    geneletter.type = temp[1][0].toLatin1();
+                    geneletter.type = temp[2][0].toLatin1();
                 }
             }
         }
@@ -649,7 +649,7 @@ void MultiPeakWidget::DrawExcludeArea(QPainter *pter)
         QVector<GeneLetter> &vec_geneLetter = m_vec_Peakline[i]->GetGeneLetter();
         int w_left =  vec_geneLetter[left_exclude].pos.x()-i_adjust;
         pter->drawRect(0,60+height_area, w_left, i_height-60);
-        int w_right = vec_geneLetter[right_exclude].pos.x()-i_adjust;
+        int w_right = vec_geneLetter[right_exclude-1].pos.x()+i_adjust;
         pter->drawRect(w_right,60+height_area, i_width, i_height-60);
     }
 }
@@ -683,12 +683,14 @@ void MultiPeakWidget::mousePressEvent(QMouseEvent *event)
     emit SignalChangePeak(m_vec_Peakline[m_index_PeakLine]->GetFileName());
 
     QPoint pos_tip = event->globalPos();
+//    QPoint pos_par = mapToParent(event->pos());
+//    qDebug()<<__func__<<pos<<pos_tip<<pos_par;
     QToolTip::showText(pos_tip,m_vec_Peakline[m_index_PeakLine]->GetFileName());
 
     QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
     int left_exclude,right_exclude;
     m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
-
+    if(vec_GeneLetter.size() == right_exclude) right_exclude--;//避免越界
     int w_left = vec_GeneLetter[left_exclude].pos.x();
     int w_right = vec_GeneLetter[right_exclude].pos.x();
 
@@ -740,9 +742,8 @@ void MultiPeakWidget::mousePressEvent(QMouseEvent *event)
                         }
                     }
                 }
-
-                qDebug()<<__func__<<left<<m_index_Select<<m_x_index;
-                emit signalPeakFocusPosition(m_index_Exon, m_x_index);
+                QPoint pos_peak = mapToParent(m_select_pos);
+                emit signalPeakFocusPosition(m_index_Exon, m_x_index , pos_peak);
             }
             else
             {
@@ -800,13 +801,13 @@ void MultiPeakWidget::keyPressEvent(QKeyEvent *event)
                 int left_exclude,right_exclude;
                 m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
 
-                QStringList list_editinfo;
+                QStringList list_editinfo;//每个string包含三个部分：碱基序列实际位置 映射到比对位置的pos 修改后的碱基
                 for(int i=left_exclude;i<right_exclude;i++)
                 {
                     if(vec_GeneLetter[i].oldtype != ' ')
                     {
-                        int selectpos = m_start_exon + m_x_index+1;
-                        list_editinfo.push_back(QString("%1:%2").arg(selectpos).arg(vec_GeneLetter[i].type));
+                        int selectpos = m_start_exon + m_x_index;
+                        list_editinfo.push_back(QString("%1:%2:%3").arg(i).arg(selectpos).arg(vec_GeneLetter[i].type));
                     }
                 }
 
@@ -816,7 +817,8 @@ void MultiPeakWidget::keyPressEvent(QKeyEvent *event)
                                                               list_editinfo.join(';'),
                                                               m_vec_Peakline[m_index_PeakLine]->GetGssp());
                     emit signalChangeDB(m_str_SampleName);//数据库发生变化，需要重新分析样品，重新显示信息
-                    emit signalPeakFocusPosition(m_index_Exon, m_x_index);
+                    QPoint pos_peak = mapToParent(m_select_pos);
+                    emit signalPeakFocusPosition(m_index_Exon, m_x_index, pos_peak);
                 }
             }
         }
@@ -824,7 +826,7 @@ void MultiPeakWidget::keyPressEvent(QKeyEvent *event)
     }
 }
 
-void MultiPeakWidget::SetSelectPos(int subpos,int x)
+void MultiPeakWidget::SetSelectPos(int subpos,int x_pos)
 {
     LOG_DEBUG("%d %d",subpos, m_index_PeakLine);
     if(!m_vec_Peakline.isEmpty())
@@ -834,7 +836,8 @@ void MultiPeakWidget::SetSelectPos(int subpos,int x)
         update();
 
         QScrollArea *pParent = dynamic_cast<QScrollArea*>(parentWidget()->parentWidget());
-        pParent->horizontalScrollBar()->setSliderPosition(m_select_pos.x()-240);
+        int pos = x-x_pos+30;
+        pParent->horizontalScrollBar()->setSliderPosition(pos);
 
         int i_tmp = m_vec_Peakline[m_index_PeakLine]->getXLeft()+subpos;
         QString str_msg("Ready");
@@ -1009,27 +1012,37 @@ void MultiPeakWidget::slotActanalyzeNow()
 
 void MultiPeakWidget::slotActanalyze()
 {
-    int left_exclude,right_exclude;
-    m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
-    QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
-
-    QStringList list_editinfo;
-    for(int i=left_exclude;i<right_exclude;i++)
+    bool bChangedb = false;
+    for(int index=0;index<m_vec_Peakline.size();index++)
     {
-        if(vec_GeneLetter[i].oldtype != ' ')
+        int left_exclude,right_exclude;
+        m_vec_Peakline[index]->GetExcludePos(left_exclude, right_exclude);
+        QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[index]->GetGeneLetter();
+
+        QStringList list_editinfo;
+        for(int i=left_exclude;i<right_exclude;i++)
         {
-            int selectpos = m_start_exon+m_x_index+1;
-            list_editinfo.push_back(QString("%1:%2").arg(selectpos).arg(vec_GeneLetter[i].type));
+            if(vec_GeneLetter[i].oldtype != ' ')
+            {
+                int selectpos = m_start_exon+m_x_index;
+                list_editinfo.push_back(QString("%1:%2:%3").arg(i).arg(selectpos).arg(vec_GeneLetter[i].type));
+            }
+        }
+
+        if(!list_editinfo.empty())
+        {
+            bChangedb = true;
+            SoapTypingDB::GetInstance()->upDatabyChangebp(m_vec_Peakline[index]->GetFileName(),
+                                                      list_editinfo.join(';'),
+                                                      m_vec_Peakline[index]->GetGssp());
         }
     }
 
-    if(!list_editinfo.empty())
+    if(bChangedb)
     {
-        SoapTypingDB::GetInstance()->upDatabyChangebp(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
-                                                  list_editinfo.join(';'),
-                                                  m_vec_Peakline[m_index_PeakLine]->GetGssp());
         emit signalChangeDB(m_str_SampleName);//数据库发生变化，需要重新分析样品，重新显示信息
-        emit signalPeakFocusPosition(m_index_Exon, m_x_index);
+        QPoint pos_peak = mapToParent(m_select_pos);
+        emit signalPeakFocusPosition(m_index_Exon, m_x_index, pos_peak);
     }
 }
 
@@ -1037,12 +1050,10 @@ void MultiPeakWidget::ExcludeArea(int type)
 {
     if (type == 3)//恢复排除区域
     {
-        m_vec_Peakline[m_index_PeakLine]->SetExcludePos(m_vec_filetable[m_index_PeakLine].getExcludeLeft(),
-                                                        m_vec_filetable[m_index_PeakLine].getExcludeRight());
+        m_vec_Peakline[m_index_PeakLine]->SetExcludePos(0, 0);
         SoapTypingDB::GetInstance()->upDataExclude(m_vec_Peakline[m_index_PeakLine]->GetGssp(),
                                                    m_vec_Peakline[m_index_PeakLine]->GetFileName(),
-                                                   m_vec_filetable[m_index_PeakLine].getExcludeLeft(),
-                                                   m_vec_filetable[m_index_PeakLine].getExcludeRight());
+                                                   0, 0);
         update();
         return;
     }

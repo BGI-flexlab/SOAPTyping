@@ -136,7 +136,7 @@ void AnalysisAB1ThreadTask::run()
 
 
     FileAlignNew file_align_new;
-    file_align_new.consensus = exonInfos.consensusSeq.data();//从数据库表oldGeneTable获取的一段序列，起始位置是exonStartPos和exonEndPos
+    file_align_new.consensus = exonInfos.consensusSeq.data();//从数据库表GeneTable获取的一段序列，起始位置是exonStartPos和exonEndPos
     file_align_new.raw_seq = m_pFiletable->getBaseSequence().data();//从文件获取的经过计算的原始序列（getBaseData（））
     file_align_new.consensus_start = exonInfos.exonStartPos;
     file_align_new.consensus_end = exonInfos.exonEndPos;

@@ -141,6 +141,10 @@ void BaseAlignTableWidget::InitUI()
                 verticalScrollBar(), &QAbstractSlider::setValue);
     connect(verticalScrollBar(), &QAbstractSlider::valueChanged,
                 m_topTableView->verticalScrollBar(), &QAbstractSlider::setValue);
+    m_topTableView->hide();
+
+    connect(horizontalScrollBar(), &QScrollBar::sliderPressed, this, &BaseAlignTableWidget::slotsliderPressed);
+    connect(horizontalScrollBar(), &QScrollBar::sliderReleased, this, &BaseAlignTableWidget::slotsliderReleased);
 }
 
 void BaseAlignTableWidget::updateTopTableViewGeometry()
@@ -235,10 +239,14 @@ void BaseAlignTableWidget::SetAlignTableData(QString &str_samplename,  QString &
 
     for(QSet<int>::iterator it=m_BaseAlignSampleInfo.editPostion.begin(); it!=m_BaseAlignSampleInfo.editPostion.end(); it++)
     {
-        char A = m_BaseAlignSampleInfo.forwardSeq[(*it)-m_BaseAlignSampleInfo.alignStartPos].toLatin1();
-        char B = m_BaseAlignSampleInfo.reverseSeq[(*it)-m_BaseAlignSampleInfo.alignStartPos].toLatin1();
+//        char A = m_BaseAlignSampleInfo.forwardSeq[(*it)-m_BaseAlignSampleInfo.alignStartPos].toLatin1();
+//        char B = m_BaseAlignSampleInfo.reverseSeq[(*it)-m_BaseAlignSampleInfo.alignStartPos].toLatin1();
+//        char C = Core::GetInstance()->mergeBases(A, B);
+//        item(4, (*it)-m_BaseAlignSampleInfo.alignStartPos+i_startColumn)->setText(QString("%1").arg(C));
+        char A = m_BaseAlignSampleInfo.forwardSeq[*it].toLatin1();
+        char B = m_BaseAlignSampleInfo.reverseSeq[*it].toLatin1();
         char C = Core::GetInstance()->mergeBases(A, B);
-        item(4, (*it)-m_BaseAlignSampleInfo.alignStartPos+i_startColumn)->setText(QString("%1").arg(C));
+        item(4, (*it)+1)->setText(QString("%1").arg(C));
     }
 
     for(QSet<int>::iterator it=m_BaseAlignSampleInfo.frMisMatchPostion.begin(); it!=m_BaseAlignSampleInfo.frMisMatchPostion.end(); it++)
@@ -484,3 +492,13 @@ void BaseAlignTableWidget::getTypeAlignResult(char *result, char *pattern, char 
     }
 }
 
+void BaseAlignTableWidget::slotsliderPressed()
+{
+    qDebug()<<horizontalScrollBar()->value();
+    m_topTableView->show();
+}
+
+void BaseAlignTableWidget::slotsliderReleased()
+{
+    m_topTableView->hide();
+}

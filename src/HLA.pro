@@ -51,7 +51,8 @@ SOURCES += \
     Dialog/exontimdlg.cpp \
     Dialog/alignmentdlg.cpp \
     log/log.cpp \
-    Dialog/updatedatadlg.cpp
+    Dialog/updatedatadlg.cpp \
+    ThreadTask/fileprocessthreadtask.cpp
 
 HEADERS += \
     Mainwindow/mainwindow.h \
@@ -81,7 +82,8 @@ HEADERS += \
     Dialog/alignmentdlg.h \
     log/log.h \
     log/macro_define.h \
-    Dialog/updatedatadlg.h
+    Dialog/updatedatadlg.h \
+    ThreadTask/fileprocessthreadtask.h
 
 
 FORMS += \
