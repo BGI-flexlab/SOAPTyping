@@ -26,13 +26,14 @@ public:
     void setFirstPair(const AlleleNameSeqPair &pair);
     void setSelectAlleles(const QMap<int, AlleleNameSeqPair> &mapPair);
     void setCodonStart(int pos);
+    void getSize();
 protected:
     QSize minimumSizeHint() const;
     void paintEvent(QPaintEvent *);
 public slots:
     void slotRepaint();
 private:
-    void getSize();
+
     void setArray();
 private:
     bool brushColor_;
@@ -64,6 +65,8 @@ class AlignmentDlg : public QDialog
 public:
     explicit AlignmentDlg(QWidget *parent = nullptr,const QString &strver="");
     ~AlignmentDlg();
+protected:
+    virtual void resizeEvent(QResizeEvent *) override;
 private:
     void InitUI();
     void ConnectSignalandSlot();

@@ -3,6 +3,7 @@
 #include "DataBase/soaptypingdb.h"
 #include <QMessageBox>
 #include <QPainter>
+#include <QtDebug>
 
 AlignPaintWgt::AlignPaintWgt(QWidget *parent)
     :QWidget(parent)
@@ -65,13 +66,13 @@ void AlignPaintWgt::slotRepaint()
 
 void AlignPaintWgt::paintEvent(QPaintEvent *e)
 {
-    if(alleNames_.size()<=1)
-        return;
     QPainter painter(this);
     painter.setPen(palette().dark().color());
     painter.setPen(Qt::black);
     painter.setBrush(Qt::NoBrush);
 
+    if(alleNames_.size()<=1)
+        return;
     int fileNum = alleNames_.size();
 
     for(int i=0; i<rowNum_; i++)
@@ -170,6 +171,11 @@ void AlignPaintWgt::paintEvent(QPaintEvent *e)
     for(int i=0; i<fileNum; i++)
     {
         const QString &allele=alleSeqs_.at(i);
+        if(allele.isEmpty())
+        {
+            qDebug()<<"error"<<firstPair_.name;
+            continue;
+        }
         h=i*fontHeight_;
         for(int j=0; j<baseNumber_;j++)
         {
@@ -314,6 +320,7 @@ AlignmentDlg::AlignmentDlg(QWidget *parent,const QString &strver) :
     m_str_genever(strver)
 {
     ui->setupUi(this);
+    setWindowFlags(windowFlags()&~Qt::WindowContextHelpButtonHint|Qt::WindowMaximizeButtonHint);
     InitUI();
     ConnectSignalandSlot();
     setGeneBoxData();
@@ -334,7 +341,9 @@ void AlignmentDlg::InitUI()
     QString windowTitle = QString("Soap Typing Allele Alignment (Version %1)").arg(m_str_genever);
     setWindowTitle(windowTitle);
 
-    m_pAlignPaintWgt = new AlignPaintWgt(ui->scrollArea);
+    m_pAlignPaintWgt = new AlignPaintWgt();
+    ui->scrollArea->setWidget(m_pAlignPaintWgt);
+    //m_pAlignPaintWgt->setMinimumSize(QSize(603,558));
 
     ui->listWidget->setSelectionMode(QAbstractItemView::MultiSelection);
 
@@ -440,15 +449,23 @@ void AlignmentDlg::slotListSelectionChanged()
         m_map_pair.remove(i);
     }
     m_pAlignPaintWgt->setSelectAlleles(m_map_pair);
+    m_pAlignPaintWgt->update();
 }
 
 void AlignmentDlg::slotClickClearAllButton()
 {
     m_map_pair.clear();
     ui->listWidget->clearSelection();
+    m_pAlignPaintWgt->setSelectAlleles(m_map_pair);
+    m_pAlignPaintWgt->update();
 }
 
 void AlignmentDlg::slotClickShowCodonBox(bool status)
 {
     m_pAlignPaintWgt->setShowCodon(status);
+}
+
+void AlignmentDlg::resizeEvent(QResizeEvent *e)
+{
+    m_pAlignPaintWgt->getSize();
 }
