@@ -63,7 +63,7 @@ class AlignmentDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit AlignmentDlg(QWidget *parent = nullptr,const QString &strver="");
+    explicit AlignmentDlg(QWidget *parent,const QString &strver,const QString &strgene);
     ~AlignmentDlg();
 protected:
     virtual void resizeEvent(QResizeEvent *) override;
@@ -88,6 +88,7 @@ private:
     QMap<int, AlleleNameSeqPair> m_map_pair;
     QMap<QString, int> m_map_coden;
     AlignPaintWgt *m_pAlignPaintWgt;
+    QString m_str_selgene;
 };
 
 #endif // ALIGNMENTDLG_H

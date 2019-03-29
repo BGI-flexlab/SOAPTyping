@@ -9,10 +9,10 @@ class fileprocessthreadtask:public QObject,public QRunnable
 {
     Q_OBJECT
 public:
-    fileprocessthreadtask(const QStringList &filePathList,
-                          const QMap<QString, ExonAndRF> &map_info);
+    fileprocessthreadtask(const QStringList &filePathList);
     ~fileprocessthreadtask();
     virtual void run();
+    void getFileInfoData();
 signals:
     void processone(const OpenFileTable &info);
 private:
@@ -20,6 +20,7 @@ private:
 private:
     QStringList m_strlist;
     QMap<QString, ExonAndRF> m_map_ExonAndRF;
+    QMap<QString, ExonAndRF> m_map_CommonGssp;
 };
 
 #endif // FILEPROCESSTHREADTASK_H

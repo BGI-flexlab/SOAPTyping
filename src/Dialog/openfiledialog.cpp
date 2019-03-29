@@ -72,7 +72,7 @@ void OpenFileDialog::InitData()
     m_ROrFNames_List<<""<<"F"<<"R";
     m_gsspNames_List<<"";
     SoapTypingDB::GetInstance()->GetGsspNames(m_gsspNames_List);
-    SoapTypingDB::GetInstance()->GetGsspMapToExonAndFR(m_map_ExonAndRF);
+    //SoapTypingDB::GetInstance()->GetGsspMapToExonAndFR(m_map_ExonAndRF);
 
     m_geneNames_ptr->addItems(m_geneNames_List);
     m_gsspNames_ptr->addItems(m_gsspNames_List);
@@ -108,7 +108,7 @@ void OpenFileDialog::SlotOpenFile()
         m_iOpenfile = filePathList.size();
         ui->progressBar->setRange(0, m_iOpenfile);
 
-        fileprocessthreadtask *task = new fileprocessthreadtask(filePathList, m_map_ExonAndRF);
+        fileprocessthreadtask *task = new fileprocessthreadtask(filePathList);
         connect(task, &fileprocessthreadtask::processone, this, &OpenFileDialog::slotprocessone);
         QThreadPool::globalInstance()->start(task);
     }

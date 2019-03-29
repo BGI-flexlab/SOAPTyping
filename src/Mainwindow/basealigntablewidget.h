@@ -19,6 +19,8 @@ private:
     void InitUI();
     void clearBaseAlignTableSampleItem();
     void getTableHead(QStringList &head, int length, int start);
+    void getTypeResult(char *result, char *pattern, char *alleleSeq1, char *alleleSeq2,
+                                             QSet<int> &misMatch, int alignStart);
     void getTypeAlignResult(char *result, char *pattern, char *alleleSeq1, char *alleleSeq2, QSet<int> &misMatch,
                             int alignStart1, int alignStart2);
     void updateTopTableViewGeometry();

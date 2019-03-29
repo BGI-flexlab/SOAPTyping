@@ -314,10 +314,11 @@ void AlignPaintWgt::setSelectAlleles(const QMap<int, AlleleNameSeqPair> &mapPair
 
 
 
-AlignmentDlg::AlignmentDlg(QWidget *parent,const QString &strver) :
+AlignmentDlg::AlignmentDlg(QWidget *parent,const QString &strver,const QString &strgene) :
     QDialog(parent),
     ui(new Ui::AlignmentDlg),
-    m_str_genever(strver)
+    m_str_genever(strver),
+    m_str_selgene(strgene)
 {
     ui->setupUi(this);
     setWindowFlags(windowFlags()&~Qt::WindowContextHelpButtonHint|Qt::WindowMaximizeButtonHint);
@@ -379,7 +380,15 @@ void AlignmentDlg::setGeneBoxData()
     QStringList geneNames;
     SoapTypingDB::GetInstance()->getGeneNames(geneNames);
     ui->comboBox->addItems(geneNames);
-    ui->comboBox->setCurrentIndex(0);
+    if(m_str_selgene.isEmpty())
+    {
+        ui->comboBox->setCurrentIndex(0);
+    }
+    else
+    {
+        int index = ui->comboBox->findText(m_str_selgene);
+        ui->comboBox->setCurrentIndex(index);
+    }
 }
 
 void AlignmentDlg::slotGeneBoxItemChanged(const QString &gene)

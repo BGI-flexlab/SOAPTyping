@@ -15,6 +15,7 @@ public:
     void SetTreeData();
     void SetSelectItem(int index, const QString &str_sample);
     void SetSelectItemByName(const QString &str_sample, const QString &str_file);
+    void RefreshSelectSample(const QString &str_sample);
 private:
     void InitUI();
     void CreateRightMenu();

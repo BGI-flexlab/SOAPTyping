@@ -11,18 +11,11 @@ ExonNavigatorWidget::ExonNavigatorWidget(QWidget *parent)
 {
     m_bRefresh = false;
     m_iheight = 100;
-    m_itop1 = m_iheight*0.45;
-    m_itop2 = m_iheight*0.5;
-    m_itop3 = m_iheight*0.7+1;
-    m_ih0 = m_iheight*0.3;
-    m_ih1 = m_iheight*0.5;
-    m_ih2 = m_iheight*0.4;
-    m_ih3 = m_iheight*0.2;
     m_iMidgap = 40;
     m_igap = 20;
     m_isub_pos = 0;
     m_dXscale = 0.0;
-    m_vec_Exon.reserve(4);
+    m_vec_Exon.reserve(7);
 }
 
 ExonNavigatorWidget::~ExonNavigatorWidget()
@@ -81,22 +74,22 @@ void ExonNavigatorWidget::SetExonData(QString &str_sample, QString &str_gene)
     m_iStartPeakpos = m_vecExonIndex[m_Exoninfo.minExonIndex-1];
     assert(m_isub_pos> 0);
 
-    foreach(int pos,m_Exoninfo.vec_frUnEqual)
+    foreach(int pos,m_Exoninfo.vec_frUnEqual)//正反序列兼容但不同
     {
         m_map_mispos.insert(pos,0);
     }
 
-    foreach(int pos,m_Exoninfo.vec_editPos)
+    foreach(int pos,m_Exoninfo.vec_editPos)//编辑过的碱基
     {
         m_map_mispos.insert(pos,0);
     }
 
-    foreach(int pos,m_Exoninfo.vec_frMis)
+    foreach(int pos,m_Exoninfo.vec_frMis)//正反序列不兼容
     {
         m_map_mispos.insert(pos,0);
     }
 
-    foreach(int pos,m_Exoninfo.vec_pcMis)
+    foreach(int pos,m_Exoninfo.vec_pcMis)//样品简并序列和一致性序列不兼容
     {
         m_map_mispos.insert(pos,0);
     }
@@ -137,9 +130,18 @@ void ExonNavigatorWidget::paintEvent(QPaintEvent *event)
 {
     QPainter exonPainter(this);
     int i_width = width();
+    m_iheight = height();
     exonPainter.setPen(QColor(139,139,139));
     exonPainter.setBrush(Qt::white);
     exonPainter.drawRect(QRect(0,0,i_width-1,m_iheight -1));
+
+    m_itop1 = m_iheight*0.45;
+    m_itop2 = m_iheight*0.5;
+    m_itop3 = m_iheight*0.7+1;
+    m_ih0 = m_iheight*0.3;
+    m_ih1 = m_iheight*0.5;
+    m_ih2 = m_iheight*0.4;
+    m_ih3 = m_iheight*0.2;
 
     if(m_isub_pos)
     {
@@ -169,11 +171,23 @@ void ExonNavigatorWidget::DrawExonArea(QPainter &exonPainter)
         QRect recti(x_pos_index, 0, 80, m_ih0);
         exonPainter.setBrush(Qt::NoBrush);
         exonPainter.setFont(fontRegion);
-        exonPainter.drawText(recti, Qt::AlignHCenter|Qt::AlignCenter, QString("Exon%1").arg(exon.i_exonindex));
-        exonPainter.setFont(fontPos);
-        QRect recti1(x_pos, 0, width, m_ih1);
-        exonPainter.drawText(recti1, Qt::AlignLeft|Qt::AlignBottom, QString::number(exon.i_exonstartpos));
-        exonPainter.drawText(recti1, Qt::AlignRight|Qt::AlignBottom, QString::number(exon.i_exonendpos));
+
+        if(width<80)
+        {
+            exonPainter.drawText(recti, Qt::AlignHCenter|Qt::AlignCenter, QString::number(exon.i_exonindex));
+            exonPainter.setFont(fontPos);
+            QRect recti1(x_pos, 0, width, m_ih1);
+            //exonPainter.drawText(recti1, Qt::AlignLeft|Qt::AlignBottom, QString::number(exon.i_exonstartpos));
+            exonPainter.drawText(recti1, Qt::AlignRight|Qt::AlignBottom, QString::number(exon.i_exonendpos));
+        }
+        else
+        {
+            exonPainter.drawText(recti, Qt::AlignHCenter|Qt::AlignCenter, QString("Exon%1").arg(exon.i_exonindex));
+            exonPainter.setFont(fontPos);
+            QRect recti1(x_pos, 0, width, m_ih1);
+            exonPainter.drawText(recti1, Qt::AlignLeft|Qt::AlignBottom, QString::number(exon.i_exonstartpos));
+            exonPainter.drawText(recti1, Qt::AlignRight|Qt::AlignBottom, QString::number(exon.i_exonendpos));
+        }
     }
 }
 
@@ -195,30 +209,30 @@ void ExonNavigatorWidget::DrawExonPos(QPainter &exonPainter)
     exonPainter.setBrush(QColor(0,0,255));
     foreach(int pos,m_Exoninfo.vec_frUnEqual)
     {
-        exonPainter.drawRect(PeakPosToScreenPos(pos), m_itop2, 2, m_ih3);
+        exonPainter.drawRect(PeakPosToScreenPos(pos+1), m_itop2, 2, m_ih3);
     }
 
     exonPainter.setBrush(QColor(0,0,0));
     foreach(int pos,m_Exoninfo.vec_editPos)
     {
-        exonPainter.drawRect(PeakPosToScreenPos(pos), m_itop2, 2, m_ih3);
+        exonPainter.drawRect(PeakPosToScreenPos(pos+1), m_itop2, 2, m_ih3);
     }
 
     exonPainter.setBrush(QColor(57,181,74));
     foreach(int pos,m_Exoninfo.vec_frMis)
     {
-        exonPainter.drawRect(PeakPosToScreenPos(pos), m_itop2, 2, m_ih3);
+        exonPainter.drawRect(PeakPosToScreenPos(pos+1), m_itop2, 2, m_ih3);
     }
 
     exonPainter.setBrush(QColor(237,28,36));
     foreach(int pos,m_Exoninfo.vec_pcMis)
     {
-        exonPainter.drawRect(PeakPosToScreenPos(pos), m_itop2, 2, m_ih3);
+        exonPainter.drawRect(PeakPosToScreenPos(pos+1), m_itop2, 2, m_ih3);
     }
 
     foreach(int pos, m_map_typemispos.keys())
     {
-        exonPainter.drawRect(PeakPosToScreenPos(pos), m_itop3, 2, m_ih3);
+        exonPainter.drawRect(PeakPosToScreenPos(pos+1), m_itop3, 2, m_ih3);
     }
 }
 
@@ -336,7 +350,7 @@ void ExonNavigatorWidget::SetSelectFramePos(int index, int colnum, int &columnPo
     {
         if(exon.i_exonindex == index)
         {
-            int selectpos = colnum + exon.i_exonstartpos;
+            int selectpos = colnum;// + exon.i_exonstartpos;
             columnPos = selectpos  - m_iStartPeakpos -1;
             if(selectpos >= exon.i_exonstartpos && selectpos <= exon.i_exonendpos)
             {

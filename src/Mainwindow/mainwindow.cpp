@@ -58,11 +58,11 @@ void MainWindow::InitUI()
     QSplitter *mainSplitter = new QSplitter(Qt::Horizontal);
 
     m_pExonNavigatorWidget = new ExonNavigatorWidget;
-    m_pExonNavigatorWidget->setMinimumHeight(100);
-    m_pExonNavigatorWidget->setMaximumHeight(100);
+    //m_pExonNavigatorWidget->setMinimumHeight(100);
+    //m_pExonNavigatorWidget->setMaximumHeight(100);
 
     m_pBaseAlignTableWidget = new BaseAlignTableWidget;
-    m_pBaseAlignTableWidget->setMinimumHeight(220);
+    //m_pBaseAlignTableWidget->setMinimumHeight(220);
 
     m_pPeak_area = new QScrollArea;
     m_pMultiPeakWidget = new MultiPeakWidget();
@@ -77,8 +77,8 @@ void MainWindow::InitUI()
     leftSplitter->addWidget(m_pExonNavigatorWidget);
     leftSplitter->addWidget(m_pBaseAlignTableWidget);
     leftSplitter->addWidget(m_pPeak_area);
-    leftSplitter->setStretchFactor(0,10);
-    leftSplitter->setStretchFactor(1,22);
+    leftSplitter->setStretchFactor(0,8);
+    leftSplitter->setStretchFactor(1,24);
     leftSplitter->setStretchFactor(2,68);
 
     rightSplitter->addWidget(m_pSampleTreeWidget);
@@ -289,7 +289,7 @@ void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
     m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
 
     int i_sub = selectpos - exonstartpos;
-    m_pMultiPeakWidget->SetSelectPos(i_sub,270);
+    m_pMultiPeakWidget->SetSelectPos(selectpos,270);
 }
 
 //导航条起始pos,选中的峰图pos，选中的导航条起始pos,选中的导航条index
@@ -304,7 +304,7 @@ void MainWindow::slotExonFocusPosition(int startpos, int selectpos, int exonstar
     int i_sub = selectpos - exonstartpos;
     m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
-    m_pMultiPeakWidget->SetSelectPos(i_sub,270);
+    m_pMultiPeakWidget->SetSelectPos(selectpos,270);
 }
 
 void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
@@ -330,7 +330,7 @@ void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
     int i_sub = selectpos - exonstartpos;
     m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
-    m_pMultiPeakWidget->SetSelectPos(i_sub, xx);
+    m_pMultiPeakWidget->SetSelectPos(selectpos, xx);
 }
 
 void MainWindow::slotPeakFocusPosition(int index, int colnum, QPoint &pos)
@@ -365,6 +365,8 @@ void MainWindow::slotShowDeleteDlg()
 {
     DeleteFileDlg dlg(this);
     dlg.exec();
+
+    m_pSampleTreeWidget->SetTreeData();
 }
 
 void MainWindow::slotShowExportDlg()
@@ -498,7 +500,8 @@ void MainWindow::slotAlignPair()
 
 void MainWindow::slotAlignLab()
 {
-    AlignmentDlg dlg(this, m_str_GeneVer);
+    QString str_gene = m_str_SelectFile.split('_').at(1);
+    AlignmentDlg dlg(this, m_str_GeneVer, str_gene);
     dlg.exec();
 }
 
@@ -542,12 +545,12 @@ void MainWindow::slotyRoomDown()
 
 void MainWindow::slotxRoomUp()
 {
-    m_pMultiPeakWidget->AdjustPeakX(14);
+    m_pMultiPeakWidget->AdjustPeakX(2);
 }
 
 void MainWindow::slotxRoomDown()
 {
-    m_pMultiPeakWidget->AdjustPeakX(-14);
+    m_pMultiPeakWidget->AdjustPeakX(-2);
 }
 
 void MainWindow::slotResetRoom()
@@ -629,7 +632,7 @@ void MainWindow::slotShowStatusBarMsg(const QString &msg)
     ui->statusbarright->setText(msg);
 }
 
-//由于峰图进行了编辑或变更，导致数据库发生变化，除峰图和样品树外，其他需要刷新
+//由于峰图进行了编辑或变更，导致数据库发生变化，除峰图外，其他需要刷新
 void MainWindow::slotChangeDB(const QString &str_samplename)
 {
     Tipbox msg(this);
@@ -643,6 +646,7 @@ void MainWindow::slotChangeDB(const QString &str_samplename)
     m_pMatchListWidget->SetRefresh(true);
     m_pExonNavigatorWidget->SetRefresh(true);
     m_pBaseAlignTableWidget->SetRefresh(true);
+    m_pSampleTreeWidget->RefreshSelectSample(m_str_SelectSample);
     //slotSampleTreeItemChanged(m_pSelectItem, 0);
 
     QString str_info = m_pSelectItem->text(1);

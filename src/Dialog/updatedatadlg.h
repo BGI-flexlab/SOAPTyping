@@ -25,6 +25,7 @@ private slots:
     void slotApply();
     void slotClear();
     void slotInsert();
+    void slotOpenDir();
 private:
     Ui::UpdateDataDlg *ui;
     QString m_str_dir;

@@ -12,9 +12,9 @@
 #include <QFontDatabase>
 #include <QToolTip>
 
-const int PEAKLINEHIGHT = 200;
+const int PEAKLINEHIGHT = 160;
 const int HLINEHIGHT = 20;
-const int PEAK_X_STEP = 28;
+const int PEAK_X_STEP = 2;
 const int PEAK_Y_STEP = 5;
 
 PeakLine::PeakLine(long size):m_lsize(size)
@@ -274,6 +274,7 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index, cons
     int i_count_peak = m_vec_filetable.size();
     if(i_count_peak == 0)
     {
+        update();
         return;
     }
     std::set<int> set_left,set_right; //以ExonStartPos和ExonEndPos为界，计算左右两边的长度
@@ -293,7 +294,6 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index, cons
         pPeakLine->SetGssp(table.getIsGssp());
         pPeakLine->setAvgWidth(table.getAverageBaseWidth());
         pPeakLine->setAvgSignal(table.getAvgsignal());
-        //pPeakLine->setPeakXStep(PEAK_X_STEP);
         pPeakLine->setPeakYSetp(PEAK_Y_STEP);
         pPeakLine->setPeakHeight(PEAKLINEHIGHT);
 
@@ -304,40 +304,50 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index, cons
             len_exon = m_end_exon - m_start_exon;
         }
 
-        QString&  usefulseq = table.getUsefulSequence();
-        int dif_len = 0;
-        int dif_pos = 0;
-        bool bdif = true;
-        for(int i_pos=0; i_pos< usefulseq.length(); i_pos++)
-        {
-            if(bdif && usefulseq[i_pos] == '-')
-            {
-                dif_len++;
-                dif_pos++;
-            }
-            else
-            {
-                bdif = false;
-                if(usefulseq[i_pos] == '.')//存在缺失碱基
-                {
-                    int base_del_pos = i_pos - dif_pos + table.getAlignStartPos();
-                    pPeakLine->setDelpos(base_del_pos);
-                    dif_pos++;
-                }
-            }
-        }
-
-        int i_AlgineStartPos = table.getAlignStartPos();
-        int i_AlgineEndPos = table.getAlignEndPos();
-        int i_left = i_AlgineStartPos - dif_len;
-        int i_right = table.getBaseNumber() - i_AlgineEndPos;
-        set_left.insert(i_left);
-        set_right.insert(i_right);
-        pPeakLine->setXLeft(i_left);
-
         m_vec_Peakline.push_back(pPeakLine);
     }
+}
 
+void MultiPeakWidget::CalcPeakLineData(int exon_pos)
+{
+    std::set<int> set_left,set_right;
+    int i_count_peak = m_vec_filetable.size();
+    if(i_count_peak == 0)
+    {
+        update();
+        return;
+    }
+    for(int i=0;i<i_count_peak;i++)
+    {
+        Ab1FileTableBase &table = m_vec_filetable[i];
+        long l_size = table.getSignalNumber();
+
+        QVector<QStringRef> baseposion = table.getBasePostion().splitRef(':');
+
+        QVector<QStringRef> aligninfo = table.getAlignInfo().splitRef(':');
+        QString ref(QString::number(exon_pos-1));
+        int index = aligninfo.indexOf(&ref);//根据外显子坐标，找到对齐的峰图下标
+        int i_left = 0;
+        int i_right = 0;
+        if(index != -1) //没有超过峰图边界
+        {
+            if(i == m_index_PeakLine)
+            {
+                m_index_Select = index;
+            }
+            int tmp = baseposion[index].toInt();
+            i_left = tmp*m_x_step;
+            i_right = (l_size - tmp)*m_x_step;
+        }
+
+        set_left.insert(i_left);
+        set_right.insert(i_right);
+
+        QSharedPointer<PeakLine> pPeakLine = m_vec_Peakline[i];
+        pPeakLine->setXLeft(i_left);
+    }
+
+    Q_ASSERT(!set_left.empty());
     for(int i=0;i<i_count_peak;i++)
     {
         QSharedPointer<PeakLine> pPeakLine = m_vec_Peakline[i];
@@ -345,12 +355,12 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index, cons
         pPeakLine->SetOffset(i_offset);
     }
 
-    m_l_xSize = *(set_left.crbegin()) + *(set_right.crbegin()) + len_exon;//取左右最大值，和中间匹配间距相加为总长度
+    m_l_xSize = *(set_left.crbegin()) + *(set_right.crbegin());//以当前所选的位置为对齐，取其左右最大值，相加为总长度
     m_maxleft = *(set_left.crbegin());
     SetPeakLineData();
 }
 
-//这个地方要注意性能问题
+
 void MultiPeakWidget::SetPeakLineData()
 {
     m_iPeakHeightTotal = 0;
@@ -360,7 +370,6 @@ void MultiPeakWidget::SetPeakLineData()
         long l_size = table.getSignalNumber();
         QSharedPointer<PeakLine> pPeakLine = m_vec_Peakline[k];
         int iPeakHeight = pPeakLine->getPeakHeight();
-        int i_offset = (pPeakLine->GetOffset())*m_x_step;
         double d_ystep = pPeakLine->getPeakYStep()*1.0/100;
 
         QVector<QStringRef> A_list = table.getBaseASignal().splitRef(':');
@@ -371,11 +380,9 @@ void MultiPeakWidget::SetPeakLineData()
         QVector<QStringRef> baseposion = table.getBasePostion().splitRef(':');
         QVector<QStringRef> basequal = table.getBaseQuality().splitRef(':');
 
+        int i_offset = pPeakLine->GetOffset();
+
         int i_basenum = table.getBaseNumber();
-        int pos_i = 0;
-        double pos_j = 0.0;
-        int i_index = 0;
-        int begin = 0;
         m_iPeakHeightTotal +=iPeakHeight;
         int height_letter = m_iPeakHeightTotal - iPeakHeight;
 
@@ -384,73 +391,35 @@ void MultiPeakWidget::SetPeakLineData()
         pPeakLine->GetBasePoint('G').clear();
         pPeakLine->GetBasePoint('C').clear();
 
-
-        int line_offset = i_offset;
-        for(int i=0;i<i_basenum;i++)
+        for(int i=0;i<l_size;i++)
         {
-            if(!pPeakLine->getDelpos().empty() && pPeakLine->getDelpos().indexOf(i)!=-1)
-            {
-                line_offset+=m_x_step;
-            }
+            double a_x = i*m_x_step+i_offset;
+            double a_y = m_iPeakHeightTotal-A_list[i].toInt()*d_ystep;
+            pPeakLine->SetBasePoint('A',a_x,a_y);
 
-            int end = baseposion[i].toInt();
-            int num = end - begin;
-            pos_i = i*m_x_step + line_offset;
-            for(int j = 0; j < num; j++)
-            {
-                pos_j = pos_i + j*m_x_step/num;
-                double a_y = m_iPeakHeightTotal-A_list[i_index].toInt()*d_ystep;
-                pPeakLine->SetBasePoint('A',pos_j,a_y);
+            double t_y = m_iPeakHeightTotal-T_list[i].toInt()*d_ystep;
+            pPeakLine->SetBasePoint('T',a_x,t_y);
 
-                double t_y = m_iPeakHeightTotal-T_list[i_index].toInt()*d_ystep;
-                pPeakLine->SetBasePoint('T',pos_j,t_y);
+            double g_y = m_iPeakHeightTotal-G_list[i].toInt()*d_ystep;
+            pPeakLine->SetBasePoint('G',a_x,g_y);
 
-                double g_y = m_iPeakHeightTotal-G_list[i_index].toInt()*d_ystep;
-                pPeakLine->SetBasePoint('G',pos_j,g_y);
-
-                double c_y = m_iPeakHeightTotal-C_list[i_index].toInt()*d_ystep;
-                pPeakLine->SetBasePoint('C',pos_j,c_y);
-
-                i_index++;
-            }
-            begin = end;
+            double c_y = m_iPeakHeightTotal-C_list[i].toInt()*d_ystep;
+            pPeakLine->SetBasePoint('C',a_x,c_y);
         }
 
-        int num = l_size - i_index;
-        for(int j = 0;i_index < l_size;i_index++,j++)
-        {
-            pos_j = pos_i + j*m_x_step/num;
-            double a_y = m_iPeakHeightTotal-A_list[i_index].toInt()*d_ystep;
-            pPeakLine->SetBasePoint('A',pos_j,a_y);
-
-            double t_y = m_iPeakHeightTotal-T_list[i_index].toInt()*d_ystep;
-            pPeakLine->SetBasePoint('T',pos_j,t_y);
-
-            double g_y = m_iPeakHeightTotal-G_list[i_index].toInt()*d_ystep;
-            pPeakLine->SetBasePoint('G',pos_j,g_y);
-
-            double c_y = m_iPeakHeightTotal-C_list[i_index].toInt()*d_ystep;
-            pPeakLine->SetBasePoint('C',pos_j,c_y);
-        }
-
-        int letter_offset = i_offset;
         if(pPeakLine->GetGeneLetter().isEmpty())
         {
             QByteArray &baseseq = table.getBaseSequence();
             for(int i=0;i<i_basenum;i++)
             {
-                if(!pPeakLine->getDelpos().empty() && pPeakLine->getDelpos().indexOf(i)!=-1)
-                {
-                    letter_offset+=m_x_step;
-                }
-
+                int pos = baseposion[i].toInt();
                 GeneLetter geneletter;
-                geneletter.pos.setX((i+1)*m_x_step + letter_offset-4);
+                geneletter.pos.setX((pos-1)*m_x_step+i_offset);
                 geneletter.pos.setY(37 + height_letter);
                 geneletter.type = baseseq[i];
                 geneletter.oldtype = ' ';
                 geneletter.qual = basequal[i].toInt();
-                int pos = baseposion[i].toInt();
+
                 geneletter.a_signal = A_list[pos].toInt();
                 geneletter.t_signal = T_list[pos].toInt();
                 geneletter.g_signal = G_list[pos].toInt();
@@ -464,7 +433,7 @@ void MultiPeakWidget::SetPeakLineData()
                 foreach(QStringRef str, editinfo)
                 {
                     QVector<QStringRef> temp = str.split(':');
-                    int editpos = temp[0].toInt();// - table.getExonStartPos()+table.getAlignStartPos();
+                    int editpos = temp[0].toInt();
                     GeneLetter &geneletter = pPeakLine->GetGeneLetter()[editpos];
                     geneletter.oldtype = geneletter.type;
                     geneletter.type = temp[2][0].toLatin1();
@@ -473,20 +442,16 @@ void MultiPeakWidget::SetPeakLineData()
         }
         else
         {
-            int letter_offset = i_offset;
             for(int i=0;i<pPeakLine->GetGeneLetter().size();i++)
             {
-                if(!pPeakLine->getDelpos().empty() && pPeakLine->getDelpos().indexOf(i)!=-1)
-                {
-                    letter_offset+=m_x_step;
-                }
+                int pos = baseposion[i].toInt();
                 GeneLetter &geneletter = pPeakLine->GetGeneLetter()[i];
-                geneletter.pos.setX((i+1)*m_x_step + letter_offset-4);
+                geneletter.pos.setX((pos-1)*m_x_step+i_offset);
                 geneletter.pos.setY(37 + height_letter);
             }
         }
     }
-    resize(m_l_xSize*m_x_step, m_iPeakHeightTotal+40);//如果不调用，paintEvent不响应
+    resize(m_l_xSize, m_iPeakHeightTotal+20);//如果不调用，paintEvent不响应
 }
 
 void MultiPeakWidget::paintEvent(QPaintEvent *event)
@@ -532,7 +497,7 @@ void MultiPeakWidget::DrawHLines(QPainter *pter)
     pter->setPen(pen);
 
 
-    int i_width = m_l_xSize*m_x_step;
+    int i_width = width();
     int height_total = 0;
     for(int i=0;i<m_vec_Peakline.size();i++)
     {
@@ -634,8 +599,8 @@ void MultiPeakWidget::DrawExcludeArea(QPainter *pter)
     pter->setPen(Qt::NoPen);
     pter->setBrush(Qt::darkGray);
 
-    int i_width = m_l_xSize*m_x_step;
-    int i_adjust = m_x_step/2-4;
+    int i_width = width();
+    //int i_adjust = m_x_step/2-4;
     int height_total = 0;
     for(int i=0;i<m_vec_Peakline.size();i++)
     {
@@ -647,9 +612,9 @@ void MultiPeakWidget::DrawExcludeArea(QPainter *pter)
         m_vec_Peakline[i]->GetExcludePos(left_exclude, right_exclude);
 
         QVector<GeneLetter> &vec_geneLetter = m_vec_Peakline[i]->GetGeneLetter();
-        int w_left =  vec_geneLetter[left_exclude].pos.x()-i_adjust;
+        int w_left =  vec_geneLetter[left_exclude].pos.x();
         pter->drawRect(0,60+height_area, w_left, i_height-60);
-        int w_right = vec_geneLetter[right_exclude-1].pos.x()+i_adjust;
+        int w_right = vec_geneLetter[right_exclude-1].pos.x();
         pter->drawRect(w_right,60+height_area, i_width, i_height-60);
     }
 }
@@ -682,10 +647,10 @@ void MultiPeakWidget::mousePressEvent(QMouseEvent *event)
     }
     emit SignalChangePeak(m_vec_Peakline[m_index_PeakLine]->GetFileName());
 
-    QPoint pos_tip = event->globalPos();
+    //QPoint pos_tip = event->globalPos();
 //    QPoint pos_par = mapToParent(event->pos());
 //    qDebug()<<__func__<<pos<<pos_tip<<pos_par;
-    QToolTip::showText(pos_tip,m_vec_Peakline[m_index_PeakLine]->GetFileName());
+    //QToolTip::showText(pos_tip,m_vec_Peakline[m_index_PeakLine]->GetFileName());
 
     QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
     int left_exclude,right_exclude;
@@ -723,25 +688,18 @@ void MultiPeakWidget::mousePressEvent(QMouseEvent *event)
                 {
                     m_bIsSelect = true; //判断是否选中了碱基字符
                 }
-                m_select_pos = vec_GeneLetter[m_index_Select].pos;
-                int left = m_vec_Peakline[m_index_PeakLine]->getXLeft();
-                m_x_index = m_index_Select-left;
 
-                QVector<int> &vec_pos = m_vec_Peakline[m_index_PeakLine]->getDelpos();
-                if(!vec_pos.empty())
+                QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+                m_x_index =  aligninfo[m_index_Select].toInt()+1;
+                if(m_x_index == 0)
                 {
-                    foreach(int pos, vec_pos)
-                    {
-                        if(m_index_Select>= pos)
-                        {
-                            m_x_index++;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
+                    qDebug()<<"mismatch del";
+                    return;
                 }
+
+                CalcPeakLineData(m_x_index);
+
+                m_select_pos = vec_GeneLetter[m_index_Select].pos;
                 QPoint pos_peak = mapToParent(m_select_pos);
                 emit signalPeakFocusPosition(m_index_Exon, m_x_index , pos_peak);
             }
@@ -752,30 +710,35 @@ void MultiPeakWidget::mousePressEvent(QMouseEvent *event)
             }
         }
 
-        QString str_msg;
-        if(m_bIsSelect)
-        {
-            str_msg = QString("Signal G:%1 T:%2 A:%3 C:%4 N/S:%5% QV:%6 Space:%7").
-                    arg(vec_GeneLetter[m_index_Select].g_signal).arg(vec_GeneLetter[m_index_Select].t_signal).
-                    arg(vec_GeneLetter[m_index_Select].a_signal).arg(vec_GeneLetter[m_index_Select].c_signal).
-                    arg(QString::number(m_vec_Peakline[m_index_PeakLine]->getAvgSignal()*100,'f',2)).
-                    arg(vec_GeneLetter[m_index_Select].qual).
-                    arg(QString::number(m_vec_Peakline[m_index_PeakLine]->getAvgWidth(),'f',2));
-        }
-        else
-        {
-            int selectpos = m_x_index+m_start_exon+1;
-            int integer = (selectpos + 2 - m_vec_filetable[m_index_PeakLine].getAlignStartPos())/3;
-            int Remainder = (selectpos + 2 - m_vec_filetable[m_index_PeakLine].getAlignStartPos())%3;
-            QString str_codon = QString("%1.%2").arg(integer).arg(Remainder);
-            QString str_code(vec_GeneLetter[m_index_Select-1].type);
-            str_code.append(vec_GeneLetter[m_index_Select].type);
-            str_code.append(vec_GeneLetter[m_index_Select+1].type);
 
-            str_msg = QString("Exon:%1 Codon:%2 Pos:%3 Code:%4 QV:%5").arg(m_index_Exon).arg(str_codon).
-                    arg(selectpos).arg(str_code).arg(vec_GeneLetter[m_index_Select].qual);
+
+        QString str_msg;
+        if(m_index_Select>1)
+        {
+            if(m_bIsSelect)
+            {
+                str_msg = QString("Signal G:%1 T:%2 A:%3 C:%4 N/S:%5% QV:%6 Space:%7").
+                        arg(vec_GeneLetter[m_index_Select].g_signal).arg(vec_GeneLetter[m_index_Select].t_signal).
+                        arg(vec_GeneLetter[m_index_Select].a_signal).arg(vec_GeneLetter[m_index_Select].c_signal).
+                        arg(QString::number(m_vec_Peakline[m_index_PeakLine]->getAvgSignal()*100,'f',2)).
+                        arg(vec_GeneLetter[m_index_Select].qual).
+                        arg(QString::number(m_vec_Peakline[m_index_PeakLine]->getAvgWidth(),'f',2));
+            }
+            else
+            {
+                int selectpos = m_x_index;
+                int integer = (selectpos + 2 - m_vec_filetable[m_index_PeakLine].getAlignStartPos())/3;
+                int Remainder = (selectpos + 2 - m_vec_filetable[m_index_PeakLine].getAlignStartPos())%3;
+                QString str_codon = QString("%1.%2").arg(integer).arg(Remainder);
+                QString str_code(vec_GeneLetter[m_index_Select-1].type);
+                str_code.append(vec_GeneLetter[m_index_Select].type);
+                str_code.append(vec_GeneLetter[m_index_Select+1].type);
+
+                str_msg = QString("Exon:%1 Codon:%2 Pos:%3 Code:%4 QV:%5").arg(m_index_Exon).arg(str_codon).
+                        arg(selectpos).arg(str_code).arg(vec_GeneLetter[m_index_Select].qual);
+            }
+            emit signalSendStatusBarMsg(str_msg);
         }
-        emit signalSendStatusBarMsg(str_msg);
         update();
     }
 }
@@ -806,7 +769,7 @@ void MultiPeakWidget::keyPressEvent(QKeyEvent *event)
                 {
                     if(vec_GeneLetter[i].oldtype != ' ')
                     {
-                        int selectpos = m_start_exon + m_x_index;
+                        int selectpos = m_x_index-1;
                         list_editinfo.push_back(QString("%1:%2:%3").arg(i).arg(selectpos).arg(vec_GeneLetter[i].type));
                     }
                 }
@@ -826,35 +789,33 @@ void MultiPeakWidget::keyPressEvent(QKeyEvent *event)
     }
 }
 
-void MultiPeakWidget::SetSelectPos(int subpos,int x_pos)
+void MultiPeakWidget::SetSelectPos(int exon_pos,int x_pos)
 {
-    LOG_DEBUG("%d %d",subpos, m_index_PeakLine);
+    LOG_DEBUG("%d %d",exon_pos, m_index_PeakLine);
+    CalcPeakLineData(exon_pos);
     if(!m_vec_Peakline.isEmpty())
     {
-        int x = (m_maxleft+1+subpos)*m_x_step - 4;
-        m_select_pos = QPoint(x, 0);
+        m_select_pos = QPoint(m_maxleft, 0);
         update();
 
         QScrollArea *pParent = dynamic_cast<QScrollArea*>(parentWidget()->parentWidget());
-        int pos = x-x_pos+30;
+        int pos = m_maxleft-x_pos+30;
         pParent->horizontalScrollBar()->setSliderPosition(pos);
 
-        int i_tmp = m_vec_Peakline[m_index_PeakLine]->getXLeft()+subpos;
         QString str_msg("Ready");
-        if(i_tmp>1)
+        QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
+        if(m_index_Select>1 && m_index_Select < vec_GeneLetter.size()-1)
         {
-            QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
-
-            int selectpos = subpos+m_vec_filetable[m_index_PeakLine].getExonStartPos()+1;
+            int selectpos = exon_pos;
             int integer = (selectpos + 2 - m_vec_filetable[m_index_PeakLine].getAlignStartPos())/3;
             int Remainder = (selectpos + 2 - m_vec_filetable[m_index_PeakLine].getAlignStartPos())%3;
             QString str_codon = QString("%1.%2").arg(integer).arg(Remainder);
-            QString str_code(vec_GeneLetter[i_tmp-1].type);
-            str_code.append(vec_GeneLetter[i_tmp].type);
-            str_code.append(vec_GeneLetter[i_tmp+1].type);
+            QString str_code(vec_GeneLetter[m_index_Select-1].type);
+            str_code.append(vec_GeneLetter[m_index_Select].type);
+            str_code.append(vec_GeneLetter[m_index_Select+1].type);
 
             str_msg = QString("Exon:%1 Codon:%2 Pos:%3 Code:%4 QV:%5").arg(m_index_Exon).arg(str_codon).
-                    arg(selectpos).arg(str_code).arg(vec_GeneLetter[i_tmp].qual);
+                    arg(selectpos).arg(str_code).arg(vec_GeneLetter[m_index_Select].qual);
         }
 
         emit signalSendStatusBarMsg(str_msg);
@@ -1024,7 +985,7 @@ void MultiPeakWidget::slotActanalyze()
         {
             if(vec_GeneLetter[i].oldtype != ' ')
             {
-                int selectpos = m_start_exon+m_x_index;
+                int selectpos = m_x_index-1;
                 list_editinfo.push_back(QString("%1:%2:%3").arg(i).arg(selectpos).arg(vec_GeneLetter[i].type));
             }
         }
@@ -1109,9 +1070,13 @@ void MultiPeakWidget::AdjustPeakHeight(int height)
     {
         int peak_height = m_vec_Peakline[m_index_PeakLine]->getPeakHeight();
         peak_height += height;
-        if(peak_height >= 160 && peak_height <= 300)
+        if(peak_height >= 100 && peak_height <= 300)
         {
             m_vec_Peakline[m_index_PeakLine]->setPeakHeight(peak_height);
+        }
+        else
+        {
+            return;
         }
     }
     else
@@ -1120,9 +1085,13 @@ void MultiPeakWidget::AdjustPeakHeight(int height)
         {
             int peak_height = m_vec_Peakline[i]->getPeakHeight();
             peak_height += height;
-            if(peak_height >= 160 && peak_height <= 300)
+            if(peak_height >= 100 && peak_height <= 300)
             {
                 m_vec_Peakline[i]->setPeakHeight(peak_height);
+            }
+            else
+            {
+                return;
             }
         }
     }
@@ -1170,7 +1139,7 @@ void MultiPeakWidget::AdjustPeakX(int x)
 {
     m_bIsSelect = false;
     m_x_step += x;
-    if(m_x_step >= 14 && m_x_step <= 14*4)
+    if(m_x_step >= 2 && m_x_step <= 5*2)
     {
         SetPeakLineData();
         QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();

@@ -124,14 +124,14 @@ void SampleTreeWidget::SetTreeData()
         top->setText(1, sampleTreeInfo.geneName);
         //top->setForeground(1, brush);
         top->setIcon(0, Core::GetInstance()->getIcon(sampleTreeInfo.analysisType, sampleTreeInfo.markType));
-        top->setSizeHint(0,QSize(200,15));
+        //top->setSizeHint(0,QSize(200,15));
         int treeSize=sampleTreeInfo.treeinfo.size();
         for(int j=0; j<treeSize; j++)
         {
             const FileTreeInfo_t &fileTreeInfo = sampleTreeInfo.treeinfo.at(j);
             QTreeWidgetItem *child = new QTreeWidgetItem;
             child->setText(0, fileTreeInfo.fileName);
-            child->setSizeHint(0,QSize(350,25));
+            //child->setSizeHint(0,QSize(350,25));
             if(!fileTreeInfo.isGssp)
             {
                 if(fileTreeInfo.analysisType == 1)
@@ -193,6 +193,22 @@ void SampleTreeWidget::SetSelectItem(int index, const QString &str_sample)
                     break;
                 }
             }
+            break;
+        }
+    }
+}
+
+void SampleTreeWidget::RefreshSelectSample(const QString &str_sample)
+{
+    for(int i=0;i<topLevelItemCount();i++)
+    {
+        QString str_name = topLevelItem(i)->text(0);
+        if(str_name == str_sample)
+        {
+            int analysisType=0;
+            int markType=0;
+            SoapTypingDB::GetInstance()->getSampleanalysisType(str_sample, analysisType, markType);
+            topLevelItem(i)->setIcon(0, Core::GetInstance()->getIcon(analysisType, markType));
             break;
         }
     }

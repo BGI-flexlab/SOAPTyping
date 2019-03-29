@@ -72,7 +72,7 @@ private:
     QStringList m_ROrFNames_List;               //正序，反序名称列表
     QSet<QString> m_set_File;                  //列表文件集合
     QSet<QString> m_set_sample;                 //样品set
-    QMap<QString, ExonAndRF> m_map_ExonAndRF;  //外显子和正反序map
+    //QMap<QString, ExonAndRF> m_map_ExonAndRF;  //外显子和正反序map
     int m_iPrgvalue;                            //进度条数值
     int m_iOpenfile;                            //选中导入的文件数目
 

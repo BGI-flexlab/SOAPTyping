@@ -276,11 +276,11 @@ void BaseAlignTableWidget::SetAlignTableData(QString &str_samplename,  QString &
                 item(3, i+info.gsspFileAlignStartPos - m_BaseAlignSampleInfo.alignStartPos + i_startColumn)->setText(line.at(i));
             }
         }
-        line = info.gsspSeq;
-        for(int i=0; i<line.size(); i++)
-        {
-            item(3, i+info.gsspPostion - m_BaseAlignSampleInfo.alignStartPos + i_startColumn)->setText(line.at(i));
-        }
+        //line = info.gsspSeq;
+        //for(int i=0; i<line.size(); i++)
+        //{
+            item(3, info.gsspPostion - m_BaseAlignSampleInfo.alignStartPos + i_startColumn)->setText(info.gsspSeq);
+        //}
     }
 }
 
@@ -421,9 +421,11 @@ void BaseAlignTableWidget::SetAllelePairData(QString &allele1, QString &allele2)
     else
     {
         QByteArray patternSeq = m_BaseAlignSampleInfo.patternSeq.toLatin1();
-        getTypeAlignResult(result.data(), patternSeq.data(), allele1Seq.data(),
-                           allele2Seq.data(), misMatch, m_BaseAlignSampleInfo.alignStartPos,
-                           m_BaseAlignSampleInfo.alignStartPos);
+//        getTypeAlignResult(result.data(), patternSeq.data(), allele1Seq.data(),
+//                           allele2Seq.data(), misMatch, m_BaseAlignSampleInfo.alignStartPos,
+//                           m_BaseAlignSampleInfo.alignStartPos);
+        getTypeResult(result.data(), patternSeq.data(), allele1Seq.data(),
+                      allele2Seq.data(), misMatch, m_BaseAlignSampleInfo.alignStartPos);
     }
 
     QString results = QString(result);
@@ -447,6 +449,60 @@ void BaseAlignTableWidget::SetAllelePairData(QString &allele1, QString &allele2)
     if(misMatch.size()>0)
     {
         emit signalTypeMisMatchPosition(misMatch, 0);
+    }
+}
+
+void BaseAlignTableWidget::getTypeResult(char *result, char *pattern, char *alleleSeq1, char *alleleSeq2,
+                                         QSet<int> &misMatch, int alignStart)
+{
+    int size =strlen(pattern);
+    for(int i=0; i<size; i++)
+    {
+        if(pattern[i]=='-' || pattern[i]=='N')
+        {
+            continue;
+        }
+
+        if(alleleSeq1[i] == '*')
+        {
+            if(alleleSeq2[i] != '*')
+            {
+                if(!Core::GetInstance()->isEqualPC(pattern[i], alleleSeq2[i]))
+                {
+                    result[i]=alleleSeq2[i];
+                    misMatch.insert(i+alignStart);
+                }
+            }
+            continue;
+        }
+
+        if(alleleSeq2[i] == '*')
+        {
+            if(!Core::GetInstance()->isEqualPC(pattern[i], alleleSeq1[i]))
+            {
+                result[i]=alleleSeq1[i];
+                misMatch.insert(i+alignStart);
+            }
+            continue;
+        }
+
+        if(alleleSeq1[i] == alleleSeq2[i])
+        {
+            if(pattern[i] != alleleSeq1[i])
+            {
+                result[i]=alleleSeq1[i];
+                misMatch.insert(i+alignStart);
+            }
+            continue;
+        }
+
+        bool ret1 = Core::GetInstance()->isEqualPC(pattern[i], alleleSeq1[i]);
+        bool ret2 = Core::GetInstance()->isEqualPC(pattern[i], alleleSeq2[i]);
+        if(!ret1 || !ret2)
+        {
+            result[i]=alleleSeq1[i];
+            misMatch.insert(i+alignStart);
+        }
     }
 }
 

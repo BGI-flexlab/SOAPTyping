@@ -4,11 +4,17 @@
 #include <QTableWidgetItem>
 
 
-fileprocessthreadtask::fileprocessthreadtask(const QStringList &filePathList,
-                                             const QMap<QString, ExonAndRF> &map_info)
+fileprocessthreadtask::fileprocessthreadtask(const QStringList &filePathList)
 {
     m_strlist = filePathList;
-    m_map_ExonAndRF = map_info;
+    getFileInfoData();
+}
+
+void fileprocessthreadtask::getFileInfoData()
+{
+    SoapTypingDB::GetInstance()->GetGsspMapToExonAndFR(m_map_ExonAndRF);
+
+    SoapTypingDB::GetInstance()->GetCommonGsspMapToExonAndFR(m_map_CommonGssp);
 }
 
 
@@ -50,7 +56,17 @@ void fileprocessthreadtask::FilePathProcess(const QString &filePath, OpenFileTab
                 info.rOrF = it.value().rOrF;
             }
             else {
-                info.right = false;
+                QMap<QString, ExonAndRF>::iterator it_common = m_map_CommonGssp.find(exonString);
+                if(it_common != m_map_CommonGssp.end())//虽然是引物文件，但是当作正常的测序文件进行处理
+                {
+                    info.exonIndex = it_common.value().exonIndex;
+                    info.rOrF = it_common.value().rOrF;
+                    info.gsspName = "";
+                }
+                else
+                {
+                     info.right = false;
+                }
             }
         }
     }

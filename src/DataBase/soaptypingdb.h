@@ -15,7 +15,7 @@ public:
     }
     ~SoapTypingDB();
     void GetGsspNames(QStringList &gsspNames);      //获取gssp名称列表
-    bool FindExonAndRFByGsspName(const QString &name, QString &exonIndex, QString &RF);
+    bool GetCommonGsspMapToExonAndFR(QMap<QString, ExonAndRF> &mapToExonAndFR);
     void GetGsspMapToExonAndFR(QMap<QString, ExonAndRF> &mapToExonAndFR);
     void GetExonInfo(const QString &gene_name, int exon_index, ExonInfoS& exonInfo);
     int  GetExcludePosition(const QString &key, int &lefpos, int &rightpos);
@@ -115,6 +115,8 @@ public:
 
     void StartTransaction();
     void EndTransaction();
+    void getTypeResultFromSampleTable(const QString &sampleName, QMap<int, QString> &typeResult);
+    bool getSampleanalysisType(const QString &samplename, int &analysisType, int &markType);
 private:
     bool InitDB();
 

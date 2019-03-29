@@ -145,6 +145,7 @@ void MatchListWidget::SetTableData(const QString &str_sample, const QString &str
     }
     if(m_iRowCount && b_setgssp)
     {
+        m_str_SampleName = str_sample;
         setGssp();
     }
 }
@@ -313,6 +314,51 @@ void MatchListWidget::slotSetFinalType()
     finalTypeDlg.setSampleName(m_str_SampleName);
     finalTypeDlg.setAlleleResult(result);
     finalTypeDlg.exec();
+}
+
+
+void findUsefulGssp_new(const char *seq11, const char *seq12, const char *seq21, const char *seq22,
+                    int exonStart, int exonEnd, QVector<GsspTable> &gsspTables,
+                    QStringList &gssps, QStringList &infos)
+{
+    QSet<int> dif_pos;
+    for(int i=exonStart; i<exonEnd; i++)
+    {
+        if(seq11[i]!='*' && seq21[i]!='*'&& seq11[i]!=seq21[i])
+        {
+            dif_pos.insert(i);
+        }
+    }
+
+    for(int i=exonStart; i<exonEnd; i++)
+    {
+        if(seq12[i]!='*' && seq22[i]!='*'&& seq12[i]!=seq22[i])
+        {
+            dif_pos.insert(i);
+        }
+    }
+    if(dif_pos.size()==0)
+        return;
+
+    foreach(const GsspTable & gsspinfo, gsspTables)
+    {
+        if(dif_pos.contains(gsspinfo.position))
+        {
+            gssps.push_back(gsspinfo.gsspName);
+            QChar ch11 = seq11[gsspinfo.position];
+            QChar ch12 = seq12[gsspinfo.position];
+            QChar ch21 = seq21[gsspinfo.position];
+            QChar ch22 = seq22[gsspinfo.position];
+
+            infos.push_back(QString("%1:%2:%3:%4:%5:%6:%7:%8:%9").arg(ch11).arg(ch12).arg(ch21).arg(ch22)
+                            .arg(gsspinfo.position+1)
+                            .arg(gsspinfo.exonIndex).arg(gsspinfo.rOrF)
+                            .arg(gsspinfo.gsspName)
+                            .arg(QString(gsspinfo.base)));
+        }
+    }
+
+
 }
 
 void MatchListWidget::findUsefulGssp(const char *seq11, const char *seq12, const char *seq21, const char *seq22,
@@ -491,16 +537,18 @@ bool MatchListWidget::processGssp(const QVector<AllelePair> &allelePairs, const 
     QByteArray geneName;
     SoapTypingDB::GetInstance()->getExonIndexAndGeneBySampleName(sampleName, exonStart, exonEnd, geneName);
 
-    QVector<GsspTable> gsspTable2;
-    QVector<GsspTable> gsspTable3;
-    if(exonStart<=2 && exonEnd >=2)
-    {
-        SoapTypingDB::GetInstance()->getGsspTablesFromGsspDatabase(geneName, 2, gsspTable2);
-    }
-    if(exonStart<=3 && exonEnd >=3)
-    {
-        SoapTypingDB::GetInstance()->getGsspTablesFromGsspDatabase(geneName, 3, gsspTable3);
-    }
+    QVector<GsspTable> gsspTable;
+    SoapTypingDB::GetInstance()->getGsspTablesFromGsspDatabase(geneName, 2, gsspTable);
+//    QVector<GsspTable> gsspTable2;
+//    QVector<GsspTable> gsspTable3;
+//    if(exonStart<=2 && exonEnd >=2)
+//    {
+//        SoapTypingDB::GetInstance()->getGsspTablesFromGsspDatabase(geneName, 2, gsspTable2);
+//    }
+//    if(exonStart<=3 && exonEnd >=3)
+//    {
+//        SoapTypingDB::GetInstance()->getGsspTablesFromGsspDatabase(geneName, 3, gsspTable3);
+//    }
     QVector<int> exonIndex;
     SoapTypingDB::GetInstance()->getExonPositionIndexFromStaticDatabase(geneName, exonIndex);
     for(int i=0; i<allelePairs.size(); i++)
@@ -513,18 +561,20 @@ bool MatchListWidget::processGssp(const QVector<AllelePair> &allelePairs, const 
             const char *seq21 = (seqMap.find(allelePairs.at(j).allele1).value()).data();
             const char *seq22 = (seqMap.find(allelePairs.at(j).allele2).value()).data();
 
-            if(gsspTable2.size()>0)
-            {
-                findUsefulGssp(seq11, seq12, seq21, seq22,
-                               exonIndex.at(1),exonIndex.at(2), gsspTable2, gssps, infos
-                               );
-            }
-            if(gsspTable3.size()>0)
-            {
-                findUsefulGssp(seq11, seq12, seq21, seq22,
-                               exonIndex.at(2),exonIndex.at(3), gsspTable3, gssps, infos
-                               );
-            }
+            findUsefulGssp_new(seq11, seq12, seq21, seq22,
+                               exonIndex.at(1),exonIndex.at(3), gsspTable, gssps, infos);
+//            if(gsspTable2.size()>0)
+//            {
+//                findUsefulGssp(seq11, seq12, seq21, seq22,
+//                               exonIndex.at(1),exonIndex.at(2), gsspTable2, gssps, infos
+//                               );
+//            }
+//            if(gsspTable3.size()>0)
+//            {
+//                findUsefulGssp(seq11, seq12, seq21, seq22,
+//                               exonIndex.at(2),exonIndex.at(3), gsspTable3, gssps, infos
+//                               );
+//            }
 
             if(gssps.size()==0)
                 continue;

@@ -70,25 +70,21 @@ void SoapTypingDB::GetGsspNames(QStringList &gsspNames)
     }
 }
 
-//根据gssp名称查询F/R和外显子序号，所以geneName一列没啥影响
-bool SoapTypingDB::FindExonAndRFByGsspName(const QString &name, QString &exonIndex, QString &RF)
+//CommonGssp里的数据虽然是引物，但是当作正常的序列进行处理
+bool SoapTypingDB::GetCommonGsspMapToExonAndFR(QMap<QString, ExonAndRF> &mapToExonAndFR)
 {
     QSqlQuery query(m_SqlDB);
-    query.prepare("SELECT exonIndex,fOrR FROM commonGsspTable WHERE gsspName=?");
-    query.bindValue(0, name);
+    query.prepare("SELECT gsspName, exonIndex,fOrR FROM commonGsspTable");
     bool isSuccess = query.exec();
     if(isSuccess)
     {
-        if(query.next())
+        while(query.next())
         {
-            exonIndex = query.value(0).toString();
-            RF = query.value(1).toString();
-            return true;
+            ExonAndRF exonAndRF;
+            exonAndRF.exonIndex = query.value(1).toString();
+            exonAndRF.rOrF = query.value(2).toString();
+            mapToExonAndFR.insert(query.value(0).toString(), exonAndRF);
         }
-    }
-    else
-    {
-        return false;
     }
 }
 
@@ -101,20 +97,6 @@ void SoapTypingDB::GetGsspMapToExonAndFR(QMap<QString, ExonAndRF> &mapToExonAndF
     if(isSuccess)
     {
         while(query.next())
-        {
-            ExonAndRF exonAndRF;
-            exonAndRF.exonIndex = query.value(1).toString();
-            exonAndRF.rOrF = query.value(2).toString();
-            mapToExonAndFR.insert(query.value(0).toString(), exonAndRF);
-        }
-    }
-
-    query.prepare("SELECT gsspName, exonIndex,fOrR FROM commonGsspTable");
-    query.prepare(str_sql);
-    isSuccess = query.exec();
-    if(isSuccess)
-    {
-        if(query.next())
         {
             ExonAndRF exonAndRF;
             exonAndRF.exonIndex = query.value(1).toString();
@@ -458,33 +440,39 @@ void SoapTypingDB::modifySequence(QByteArray &sequence, QSet<int> &editPostion, 
     }
     if(excludeLeft > 0)
     {
-//        int i = excludeLeft-exonStartPos+1;
-//        while(i>0 && sequence[i]=='.')
-//        {
-//            sequence[i]= '-';
-//            i++;
-//        }
-//        for(int i=excludeLeft-exonStartPos; i>=0; i--)
-//        {
-//            sequence[i]='-';
-//        }
-        QByteArray temp(excludeLeft,'-');
-        sequence.replace(0,excludeLeft,temp);
+        for(int i=0;i<sequence.size();i++)
+        {
+            if(excludeLeft)
+            {
+                if(sequence[i]!='-')
+                {
+                    sequence[i] = '-';
+                    excludeLeft--;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
     }
     if(excludeRight > 0)
     {
-//        int i = excludeRight - exonStartPos -1;
-//        while(i>0 && sequence[i]=='.')
-//        {
-//            sequence[i] = '-';
-//            i--;
-//        }
-//        for(int i=excludeRight-exonStartPos; i>0 &&i<sequence.size(); i++)
-//        {
-//            sequence[i]='-';
-//        }
-        QByteArray temp(excludeRight,'-');
-        sequence.replace(sequence.size()-excludeRight-1, excludeRight, temp);
+        for(int i=sequence.size();i>0;i--)
+        {
+            if(excludeRight)
+            {
+                if(sequence[i]!='-')
+                {
+                    sequence[i] = '-';
+                    excludeRight--;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
     }
 }
 
@@ -606,10 +594,12 @@ void SoapTypingDB::getAlleleInfosFromStaticDatabase(const QString &geneName, int
             int max = star.at(1).toInt();
             if(min>max)
             {
-                for(int i=minExonIndex; i<=maxExonIndex; i++)
-                {
-                    alleleInfo.starInfo.append(QString("*%1").arg(i));
-                }
+//                for(int i=minExonIndex; i<=maxExonIndex; i++)
+//                {
+//                    alleleInfo.starInfo.append(QString("*%1").arg(i));
+//                }
+                qDebug()<<__func__<<alleleInfo.alleleName<<query.value(4).toString()<<"error";
+                continue;
             }
             else
             {
@@ -623,7 +613,7 @@ void SoapTypingDB::getAlleleInfosFromStaticDatabase(const QString &geneName, int
                     {
                         alleleInfo.starInfo.append(QString("*%1").arg(i));
                     }
-                    for(int i=maxExonIndex; i>max; i--)
+                    for(int i=max; i<maxExonIndex; i++)
                     {
                         alleleInfo.starInfo.append(QString("*%1").arg(i));
                     }
@@ -638,7 +628,7 @@ void SoapTypingDB::getGsspPosAndSeqFromGsspDatabase(const QString &gsspName, int
 {
     QSqlQuery query(m_SqlDB);
     query.prepare("SELECT position,base FROM gsspTable WHERE gsspName =?");
-    query.bindValue(0, gsspName.toLatin1());
+    query.bindValue(0, gsspName);
     bool isSuccess = query.exec();
     if(isSuccess)
     {
@@ -671,14 +661,11 @@ void SoapTypingDB::getGsspAlleleInfosFromStaticDatabase(const QString &geneName,
             GsspAlleleInfo gsspAlleleInfo;
             gsspAlleleInfo.alleleName = query.value(0).toString();
             QByteArray alleleSequence = query.value(1).toByteArray();
-            for(int i=0; i<gssp_seq.size(); i++)
-            {
-                if(alleleSequence[i+gssp_pos]!=gssp_seq[i].toLatin1())
-                    goto WHILE_LABLE;
-            }
+            if(alleleSequence[gssp_pos]!=gssp_seq[0].toLatin1())
+                continue;
+
             gsspAlleleInfo.alleleSequence = alleleSequence.mid(exonStartPos, gsspLength);
             gsspAlleleInfos.push_back(gsspAlleleInfo);//i2++;
-WHILE_LABLE:;
         }
     }
 }
@@ -724,6 +711,24 @@ void SoapTypingDB::getSampleTreeDataFromSampleTable(QMap<QString,SampleTreeInfo_
 
         }
     }
+}
+
+bool SoapTypingDB::getSampleanalysisType(const QString &samplename, int &analysisType, int &markType)
+{
+    QSqlQuery query(m_SqlDB);
+    query.prepare("SELECT analysisType, markType FROM sampleTable where sampleName=?");
+    query.bindValue(0, samplename);
+    bool isSuccess = query.exec();
+    if(isSuccess)
+    {
+        if(query.next())
+        {
+            analysisType = query.value(0).toInt();
+            markType = query.value(1).toInt();
+            return true;
+        }
+    }
+    return false;
 }
 
 void SoapTypingDB::getFileTreeInfosFromRealTimeDatabase(const QString &sampleName, QVector<FileTreeInfo_t> &fileTreeInfos)
@@ -856,6 +861,7 @@ void SoapTypingDB::getAlldataFormRealTime(const QString &sampleName, int exonInd
             table.setAverageBaseWidth(query.value(21).toFloat());
             table.setAlignStartPos(query.value(24).toInt());
             table.setAlignEndPos(query.value(25).toInt());
+            table.setAlignInfo(query.value(26).toString());
             table.setExcludeLeft(query.value(27).toInt());
             table.setExcludeRight(query.value(28).toInt());
             table.setEditInfo(query.value(29).toString());
@@ -893,6 +899,7 @@ void SoapTypingDB::getAlldataFormRealTime(const QString &sampleName, int exonInd
             table.setAverageBaseWidth(query_gssp.value(21).toFloat());
             table.setAlignStartPos(query_gssp.value(24).toInt());
             table.setAlignEndPos(query_gssp.value(25).toInt());
+            table.setAlignInfo(query_gssp.value(26).toString());
             table.setExcludeLeft(query_gssp.value(27).toInt());
             table.setExcludeRight(query_gssp.value(28).toInt());
             table.setEditInfo(query_gssp.value(29).toString());
@@ -1386,9 +1393,10 @@ void SoapTypingDB::getExonIndexAndGeneBySampleName(const QString &sampleName, in
 void SoapTypingDB::getGsspTablesFromGsspDatabase(const QString &geneName, int exon, QVector<GsspTable> &gsspTables)
 {
     QSqlQuery query(m_SqlDB);
-    query.prepare("SELECT gsspName,rOrF,position,base FROM gsspTable WHERE geneName =? AND exonIndex=?");
+    //query.prepare("SELECT gsspName,rOrF,position,base FROM gsspTable WHERE geneName =? AND exonIndex=?");
+    query.prepare("SELECT gsspName,rOrF,position,base FROM gsspTable WHERE geneName =?");
     query.bindValue(0, geneName);
-    query.bindValue(1, exon);
+    //query.bindValue(1, exon);
     bool isSuccess = query.exec();
     if(isSuccess)
     {
@@ -2105,4 +2113,27 @@ void SoapTypingDB::StartTransaction()
 void SoapTypingDB::EndTransaction()
 {
     m_SqlDB.commit();
+}
+
+void SoapTypingDB::getTypeResultFromSampleTable(const QString &sampleName, QMap<int, QString> &zeroResult)
+{
+    QSqlQuery query(m_SqlDB);
+    query.prepare("SELECT typeResult FROM sampleTable WHERE sampleName=?");
+    query.bindValue(0, sampleName);
+    bool isSuccess = query.exec();
+    if(isSuccess)
+    {
+        while(query.next())
+        {
+            QVector<QStringRef> vec_res = query.value(0).toString().splitRef(";", QString::SkipEmptyParts);
+            foreach (QStringRef str_ref, vec_res) {
+                QVector<QStringRef> vec_item = str_ref.split(',');
+                if(vec_item.at(0) == '0')
+                {
+                    zeroResult.insertMulti(vec_item.at(0).toInt(), vec_item.at(1).toString());
+                }
+            }
+            break;
+        }
+    }
 }

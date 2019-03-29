@@ -65,7 +65,6 @@ private:
     ExonNavigatorInfo m_Exoninfo;
     QString m_str_SampleName;
     QString m_str_GeneName;
-    //std::set<int> m_set_mispos; //set存在问题,超过8个数据后，排序异常,废弃
     QMap<int,int> m_map_mispos; //保存所有错配位置，自动排序
     QMap<int,int> m_map_typemispos; //保存allele错配位置，自动排序
     QMap<int,int> m_map_TotalMisPos; //保存m_map_mispos和m_map_typemispos的集合
