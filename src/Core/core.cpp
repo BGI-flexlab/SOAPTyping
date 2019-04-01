@@ -180,76 +180,6 @@ void Core::GetFileAlignResult(FileAlignNew &file_align_new, FileAlignResult &res
             }
         }
         result.sampleAlign[ref_len] ='\0';
-
-        //int c_index = 0;
-//        for(int i=0;i<seq_len;i++)
-//        {
-//            if(i<result.leftLimit || i > result.rightLimit)
-//            {
-//                result.baseMatchConsensusPos[i]=-1;
-//            }
-//            else
-//            {
-//                int tmp = i - result.leftLimit;
-//                if(tmp_result.consensus_alignment[tmp] != '.' &&
-//                   tmp_result.sample_alignment[tmp]!='.')
-//                {
-//                    result.baseMatchConsensusPos[i] = tmp+file_align_new.consensus_start;
-
-//                }
-//                else
-//                {
-//                    result.baseMatchConsensusPos[i]=-1;
-//                }
-//            }
-//        }
-
-
-
-        /*int start=0, end=tmp_result.sample_alignment.size();
-        for(int i=0; i<end; i++){
-            if(tmp_result.sample_alignment[i]=='.'){
-                result.sampleAlign[i]='-';
-                start++;
-            }else{
-                break;
-            }
-        }
-
-        int c_index = strlen(file_align_new.consensus);
-        for(int i=end-1; i>=start; i--)
-        {
-            if(tmp_result.sample_alignment[i]=='.'){
-                result.sampleAlign[--c_index]='-';
-                end--;
-            }else{
-                break;
-            }
-        }
-        int index=0;
-        for(int i=0; i<tmp_result.left_cut; i++){
-            result.baseMatchConsensusPos[index]=-1;
-            index++;
-        }
-        c_index = start;
-        for(int i=start; i<end; i++){
-            if(tmp_result.consensus_alignment[i] != '.'){
-                result.sampleAlign[c_index]=tmp_result.sample_alignment[i];
-                if(tmp_result.sample_alignment[i]!='.'){
-                    result.baseMatchConsensusPos[index]=c_index+file_align_new.consensus_start;
-                    index++;
-                }
-                c_index++;
-            }else{
-                result.baseMatchConsensusPos[index]=-1;
-                index++;
-            }
-        }
-        for(int i=0; i<tmp_result.right_cut;i++){
-            result.baseMatchConsensusPos[index]=-1;
-            index++;
-        }
-        result.sampleAlign[strlen(file_align_new.consensus)]='\0';*/
     }
     else
     {
@@ -487,13 +417,6 @@ bool Core::Optimize_boundary(align *nw, FileAlignResultNew *result, bool auto_cu
         result->left_cut += nw->start1;
     }
 
-//    if (nw->stop1 < strlen(seq))//参照ref，去尾
-//    {
-//        result->right_cut += strlen(seq) - nw->stop1;
-//        nw->r1[nw->stop1]='\0';
-//        nw->r2[nw->stop1]='\0';
-//    }
-
     int *mis = new int[length];
     mis[0] = 0;
     int mis_index = 0;
@@ -542,11 +465,21 @@ bool Core::Optimize_boundary(align *nw, FileAlignResultNew *result, bool auto_cu
 
         if (total_mis != 0)
         {
-            int len = mis[total_mis];
-            if (len < MIN_CUT_MIS)
+            int len_start = mis[0];
+            if (len_start< MIN_CUT_MIS)
             {
-                result->right_cut += len;
-                for (int i = len; i > 0; i--)
+                result->left_cut += len_start;
+                for (int i=0;i< len_start;i++)
+                {
+                    nw->r2[start + i] = '.';
+                }
+
+            }
+            int len_end = mis[total_mis];
+            if (len_end < MIN_CUT_MIS)
+            {
+                result->right_cut += len_end;
+                for (int i = len_end; i > 0; i--)
                 {
                     nw->r2[end - i] = '.';
                 }

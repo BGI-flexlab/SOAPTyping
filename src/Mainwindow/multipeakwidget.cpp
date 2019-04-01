@@ -764,12 +764,13 @@ void MultiPeakWidget::keyPressEvent(QKeyEvent *event)
                 int left_exclude,right_exclude;
                 m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
 
+                QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
                 QStringList list_editinfo;//每个string包含三个部分：碱基序列实际位置 映射到比对位置的pos 修改后的碱基
                 for(int i=left_exclude;i<right_exclude;i++)
                 {
                     if(vec_GeneLetter[i].oldtype != ' ')
                     {
-                        int selectpos = m_x_index-1;
+                        int selectpos = aligninfo[i].toInt();
                         list_editinfo.push_back(QString("%1:%2:%3").arg(i).arg(selectpos).arg(vec_GeneLetter[i].type));
                     }
                 }
@@ -980,12 +981,13 @@ void MultiPeakWidget::slotActanalyze()
         m_vec_Peakline[index]->GetExcludePos(left_exclude, right_exclude);
         QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[index]->GetGeneLetter();
 
+        QVector<QStringRef> aligninfo = m_vec_filetable[index].getAlignInfo().splitRef(':');
         QStringList list_editinfo;
         for(int i=left_exclude;i<right_exclude;i++)
         {
             if(vec_GeneLetter[i].oldtype != ' ')
             {
-                int selectpos = m_x_index-1;
+                int selectpos = aligninfo[i].toInt();
                 list_editinfo.push_back(QString("%1:%2:%3").arg(i).arg(selectpos).arg(vec_GeneLetter[i].type));
             }
         }

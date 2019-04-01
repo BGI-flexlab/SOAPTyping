@@ -5,7 +5,7 @@
 #include <QtConcurrent>
 #include "Core/core.h"
 #include "DataBase/soaptypingdb.h"
-const int MAX_THREAD_NUM = 5;
+const int MAX_THREAD_NUM = 6;
 AnalysisSampleThreadTask::AnalysisSampleThreadTask(const QString &str_sample):m_sample(str_sample)
 {
 
@@ -80,9 +80,9 @@ void mergeForwardAndReverseToPattern(char *forwardSeq, char *reverseSeq, char *p
     }
 }
 
-bool isEqualPC(char consensus, char pattern)
+bool isEqualPC(char A, char B) //A包含B
 {
-    return Core::GetInstance()->isEqualPC(consensus, pattern);
+    return Core::GetInstance()->isEqualPC(A, B);
 }
 
 void comparePatternWithConsensus(char *patternSeq, char *consensusSeq, int exonStartPos, QStringList &pcDifferenceList)
@@ -435,40 +435,21 @@ int comparePatternWithAlleleByThread(char *patternSeq, QVector<AlleleInfo> &alle
 {
     bool isRare=true, isFull=false;
 
-//    PairStartEnd pair;
-//    pair.startIndex = 0;
-//    pair.endIndex = alleleInfos.size();
-//    QMap<int, QString> remap;
-//    runComparePA(patternSeq, alleleInfos, differentPosInfos, &remap, pair);
-//    for(QMap<int, QString>::iterator it=remap.begin(); it!=remap.end(); it++)
-//    {
-//        typeResult.insertMulti(it.key(), it.value());
-//        if(it.key()==0)
-//        {
-//            isFull = true;
-//            if(!it.value().contains("r"))
-//            {
-//                isRare = false;
-//            }
-//        }
-//    }
-//    remap.clear();
-
     QFuture<bool> *thread = new QFuture<bool> [MAX_THREAD_NUM];
     QMap<int, QString> *result = new QMap<int, QString> [MAX_THREAD_NUM];
-    int slicelen = alleleInfos.size()/MAX_THREAD_NUM;
+    int splitPos[MAX_THREAD_NUM + 1];
+    splitPos[0] = alleleInfos.size();
+    splitPos[MAX_THREAD_NUM] = 0;
+    for (int i = 1; i < MAX_THREAD_NUM; i++)
+    {
+        splitPos[i] = int((1.0 - sqrt((double)i) / sqrt((double)MAX_THREAD_NUM)) * splitPos[0]);
+    }
+
     for(int i=0;i<MAX_THREAD_NUM;i++)
     {
         PairStartEnd pair;
-        pair.startIndex = i*slicelen;
-        if(i == MAX_THREAD_NUM-1)
-        {
-            pair.endIndex = alleleInfos.size()-1;
-        }
-        else
-        {
-            pair.endIndex = (i+1)*slicelen -1;
-        }
+        pair.startIndex = splitPos[MAX_THREAD_NUM-i];
+        pair.endIndex = splitPos[MAX_THREAD_NUM-i-1];
         thread[i] = QtConcurrent::run(runComparePA, patternSeq, alleleInfos, differentPosInfos, &result[i], pair);
     }
 
