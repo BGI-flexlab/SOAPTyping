@@ -121,24 +121,30 @@ void Core::GetFileAlignResult(FileAlignNew &file_align_new, FileAlignResult &res
         return;
     }
 
-    align al;
-    al.r1 = NULL;
-    al.r2 = NULL;
+//    align al;
+//    al.r1 = NULL;
+//    al.r2 = NULL;
     FileAlignResultNew tmp_result;
     tmp_result.left_cut = file_align_new.exclude_left_num;
     tmp_result.right_cut = file_align_new.exclude_right_num;
-    int orange_length = strlen(file_align_new.raw_seq);
-    int align_length = orange_length - tmp_result.left_cut-tmp_result.right_cut;
+    //int orange_length = strlen(file_align_new.raw_seq);
+   // int align_length = orange_length - tmp_result.left_cut-tmp_result.right_cut;
 
     //寻找consensus和raw_seq的最大公共子序列，并调整边界，把结果序列保存到tmp_result中
-    Align_LCS(file_align_new.consensus, file_align_new.raw_seq+tmp_result.left_cut, &al, align_length);
-    while(!Optimize_boundary(&al, &tmp_result, auto_cut)){
-        align_length = orange_length - tmp_result.left_cut-tmp_result.right_cut;
-        Align_LCS(file_align_new.consensus, file_align_new.raw_seq+tmp_result.left_cut, &al, align_length);
-    }
+//    Align_LCS(file_align_new.consensus, file_align_new.raw_seq+tmp_result.left_cut, &al, align_length);
+//    while(!Optimize_boundary(&al, &tmp_result, auto_cut)){
+//        align_length = orange_length - tmp_result.left_cut-tmp_result.right_cut;
+//        Align_LCS(file_align_new.consensus, file_align_new.raw_seq+tmp_result.left_cut, &al, align_length);
+//    }
 
-    qDebug()<<tmp_result.consensus_alignment<<"\r\n";
-    qDebug()<<tmp_result.sample_alignment<<"\r\n";
+//    qDebug()<<"---start------";
+//    qDebug()<<file_align_new.consensus<<"\r\n";
+//    qDebug()<<file_align_new.raw_seq<<"\r\n";
+
+    Align_LCS_new(file_align_new.consensus, file_align_new.raw_seq, &tmp_result);
+
+    //qDebug()<<tmp_result.consensus_alignment<<"\r\n";
+    //qDebug()<<tmp_result.sample_alignment<<"\r\n";
 
     int ref_len = strlen(file_align_new.consensus);
     int seq_len = strlen(file_align_new.raw_seq);
@@ -148,7 +154,7 @@ void Core::GetFileAlignResult(FileAlignNew &file_align_new, FileAlignResult &res
     {
         result.isUnDefined = 0;
         result.leftLimit = tmp_result.left_cut;
-        result.rightLimit = seq_len -tmp_result.right_cut;
+        result.rightLimit = tmp_result.right_cut;//seq_len -tmp_result.right_cut;
 
 
         for(int i=0;i<seq_len;i++)
@@ -161,22 +167,26 @@ void Core::GetFileAlignResult(FileAlignNew &file_align_new, FileAlignResult &res
         int pos = tmp_result.left_cut;
         for(int i=0;i<cmp_len;i++)
         {
-            if(tmp_result.consensus_alignment[i] !='.') //参考序列经过比对处理，可能存在缺失情况，需要过滤掉
+            if(tmp_result.consensus_alignment[i] !='-') //参考序列经过比对处理，可能存在缺失情况，需要过滤掉
             {
-                if(tmp_result.sample_alignment[i]=='.')
+                if(tmp_result.sample_alignment[i]=='-')
                 {
                     result.sampleAlign[index]='-';
                 }
                 else
                 {
                     result.sampleAlign[index]= tmp_result.sample_alignment[i];
-                    result.baseMatchConsensusPos[pos++] = index+file_align_new.consensus_start;
+                    if(pos<seq_len)
+                    {
+                        result.baseMatchConsensusPos[pos++] = index+file_align_new.consensus_start;
+                    }
                 }
                 index++;
             }
             else
             {
                 pos++;
+                result.rightLimit--;
             }
         }
         result.sampleAlign[ref_len] ='\0';
@@ -185,7 +195,9 @@ void Core::GetFileAlignResult(FileAlignNew &file_align_new, FileAlignResult &res
     {
         result.isUnDefined = 1;
     }
-    al.clear();
+    //al.clear();
+
+    //qDebug()<<result.sampleAlign;
 }
 
 void Core::Align_LCS(char *s1, char *s2, align *sg, int length)
@@ -441,7 +453,7 @@ bool Core::Optimize_boundary(align *nw, FileAlignResultNew *result, bool auto_cu
 
     if (total_mis > MIN_MIS)
     {
-        if (mis[0] > MIN_CUT_MIS)
+        if (mis[0] > MIN_CUT_MIS || mis[0] == 0)
         {
             result->left_cut++;
         }
@@ -618,4 +630,437 @@ bool Core::isEqualPC(char A, char B)
     unsigned int a = formatMerge(A);
     unsigned int b = formatMerge(B);
     return (a|b)==a;
+}
+
+
+//Smith-Waterman
+typedef struct _tagLCS
+{
+    int score;
+    int trace;
+}LCS;
+
+void Core::zzk(const char *ref, const char *seq, Myalign &zlign)
+{
+    int m = strlen(ref);
+    int n = strlen(seq);
+    int maxscore=0, x=0, y=0;
+    std::vector<std::vector<LCS>> vec_matrix(m + 1);
+
+    int bt = 0;
+    int score = 0, tmp = 0;
+    for (int i = 0; i < m + 1; i++)
+    {
+        for (int j = 0; j < n + 1; j++)
+        {
+            LCS lcs_zzk;
+            lcs_zzk.score = 0;
+            lcs_zzk.trace = 0;
+            vec_matrix[i].push_back(lcs_zzk);
+            if (i == 0 || j == 0)
+            {
+                continue;
+            }
+
+            bt = DIAG;
+            tmp = ref[i - 1] == seq[j - 1] ? SCORE_SAME : equal(ref[i - 1], seq[j - 1]) ? SCORE_MATCH : SCORE_MISMATCH;
+            score = vec_matrix[i - 1][j - 1].score + tmp;
+            tmp = vec_matrix[i][j - 1].score - 2;
+            if (tmp > score)
+            {
+                bt = LEFT;
+                score = tmp;
+            }
+            tmp = vec_matrix[i - 1][j].score - 2;
+            if (tmp > score)
+            {
+                bt = TOP;
+                score = tmp;
+            }
+            vec_matrix[i][j].score = score < 0? 0: score;//把左，上，（左上角）三个值的最大值赋值给右下角，所以右边的值总是最大的
+            vec_matrix[i][j].trace = bt;
+
+            if (maxscore < vec_matrix[i][j].score)
+            {
+                maxscore = vec_matrix[i][j].score;
+                x = i;
+                y = j;
+            }
+        }
+    }
+
+    zlign.ref_back.clear();
+    zlign.seq_back.clear();
+    zlign.ref_stop = x;
+    zlign.seq_stop = y;
+
+    while (x>0 && y>0)
+    {
+        if (vec_matrix[x][y].trace == DIAG)
+        {
+            zlign.ref_back.push_back(ref[x-1]);
+            zlign.seq_back.push_back(seq[y-1]);
+            x--;
+            y--;
+        }
+        else if (vec_matrix[x][y].trace == TOP)
+        {
+            zlign.ref_back.push_back(ref[x - 1]);
+            zlign.seq_back.push_back('-');
+            x--;
+        }
+        else if (vec_matrix[x][y].trace == LEFT)
+        {
+            zlign.ref_back.push_back('-');
+            zlign.seq_back.push_back(seq[y-1]);
+            y--;
+        }
+    }
+
+    zlign.ref_start = x;
+    zlign.seq_start = y;
+
+
+    std::reverse(zlign.ref_back.begin(), zlign.ref_back.end());
+    std::reverse(zlign.seq_back.begin(), zlign.seq_back.end());
+}
+
+
+
+typedef struct _tagcomp
+{
+    bool ismatch;
+    int len;
+    int start_pos;
+    int end_pos;
+}comp;
+
+
+bool Core::zzk_boundary(const char *ref, const char *seq, Myalign &zlign, FileAlignResultNew *result)
+{
+    std::vector<comp> vec_mis_match;
+    int i_mis = 0;
+    int i_match = 0;
+    int start_pos = 0;
+    int end_pos = zlign.ref_back.size();
+
+    for (int i = 0; i < end_pos; i++)
+    {
+        if (equal(zlign.ref_back[i], zlign.seq_back[i]))
+        {
+            if (i_mis)
+            {
+                comp c_com;
+                c_com.ismatch = false;
+                c_com.start_pos = start_pos;
+                c_com.end_pos = i;
+                c_com.len = i_mis;
+                vec_mis_match.push_back(c_com);
+                i_mis = 0;
+                start_pos = i;
+            }
+            i_match++;
+        }
+        else
+        {
+            if (i_match)
+            {
+                comp c_com;
+                c_com.ismatch = true;
+                c_com.start_pos = start_pos;
+                c_com.end_pos = i;
+                c_com.len = i_match;
+                vec_mis_match.push_back(c_com);
+                i_match = 0;
+                start_pos = i;
+            }
+            i_mis++;
+        }
+    }
+
+    if (i_mis)
+    {
+        comp c_com;
+        c_com.ismatch = false;
+        c_com.start_pos = start_pos;
+        c_com.end_pos = end_pos;
+        c_com.len = i_mis;
+        vec_mis_match.push_back(c_com);
+    }
+    if (i_match)
+    {
+        comp c_com;
+        c_com.ismatch = true;
+        c_com.start_pos = start_pos;
+        c_com.end_pos = end_pos;
+        c_com.len = i_match;
+        vec_mis_match.push_back(c_com);
+    }
+
+    result->right_cut = zlign.seq_stop + result->left_cut;
+    if (zlign.ref_start == 0)
+    {
+        result->left_cut += zlign.seq_start;
+    }
+
+    int total_mis = vec_mis_match.size();
+    if (total_mis > MIN_MIS)
+    {
+        if (vec_mis_match[0].len > MIN_CUT_MIS || vec_mis_match[0].len == 0)
+        {
+            result->left_cut++;
+        }
+        else
+        {
+            result->left_cut += vec_mis_match[0].len;
+        }
+
+        return false;
+    }
+    else
+    {
+
+        std::sort(vec_mis_match.begin(), vec_mis_match.end(),
+            [](comp &a, comp &b) {return a.len > b.len; }); //取最大的公共子串
+
+        int ref_adjust = 1;
+        int seq_adjust = 1;
+        for (int p= 0;p< vec_mis_match[0].start_pos;p++)
+        {
+            if (zlign.ref_back[p]=='-')
+            {
+                ref_adjust++;
+            }
+            if (zlign.seq_back[p]=='-')
+            {
+                seq_adjust++;
+            }
+        }
+
+        char *sz_ref = new char[512]; memset(sz_ref, 0, 512);
+        char *sz_seq = new char[512]; memset(sz_seq, 0, 512);
+
+        std::vector<char> ref_tmp;
+        std::vector<char> seq_tmp;
+        int i, j;
+        i = vec_mis_match[0].start_pos + zlign.ref_start- ref_adjust;
+        j = vec_mis_match[0].start_pos + result->left_cut- seq_adjust;
+        while (i>0)//向前延伸
+        {
+            if (equal(ref[i], seq[j]))
+            {
+                ref_tmp.push_back(ref[i]);
+                seq_tmp.push_back(seq[j]);
+                i--;
+                j--;
+            }
+            else
+            {
+                ref_tmp.push_back('-');
+                seq_tmp.push_back(seq[j]);
+                j--;
+            }
+            if (j < 0)
+            {
+                break;
+            }
+        }
+
+        for (;i>=0;i--)
+        {
+            ref_tmp.push_back(ref[i]);
+            seq_tmp.push_back('-');
+        }
+
+        int len_tmp = ref_tmp.size();
+        for (int k=0;k< len_tmp;k++)
+        {
+            sz_ref[k] = ref_tmp[len_tmp - 1 - k];
+            sz_seq[k] = seq_tmp[len_tmp - 1 - k];
+        }
+
+        int index=0;
+        for (int k = vec_mis_match[0].start_pos; k < vec_mis_match[0].end_pos; k++,index++)
+        {
+            sz_ref[index+ len_tmp] = zlign.ref_back[k];
+            sz_seq[index + len_tmp] = zlign.seq_back[k];
+        }
+
+
+        ref_tmp.clear();
+        seq_tmp.clear();
+        i = vec_mis_match[0].end_pos + zlign.ref_start;
+        j = vec_mis_match[0].end_pos + result->left_cut;
+        while (i < strlen(ref) && j< strlen(seq))//向后延伸
+        {
+            if (equal(ref[i], seq[j]))
+            {
+                ref_tmp.push_back(ref[i]);
+                seq_tmp.push_back(seq[j]);
+                i++;
+                j++;
+            }
+            else
+            {
+                ref_tmp.push_back('-');
+                seq_tmp.push_back(seq[j]);
+                j++;
+            }
+        }
+
+        for (;i< strlen(ref);i++)
+        {
+            ref_tmp.push_back(ref[i]);
+            seq_tmp.push_back('-');
+        }
+
+        int len_tmp_1 = ref_tmp.size();
+        for (int k = 0; k < len_tmp_1; k++)
+        {
+            sz_ref[k + len_tmp + vec_mis_match[0].len] = ref_tmp[k];
+            sz_seq[k + len_tmp + vec_mis_match[0].len] = seq_tmp[k];
+        }
+
+        result->consensus_alignment.push_back(sz_ref);
+        result->sample_alignment.push_back(sz_seq);
+        result->is_match = true;
+
+        delete [] sz_ref;
+        delete [] sz_seq;
+        return true;
+    }
+
+}
+
+
+void Core::Align_LCS_new(const char *ref, const char *seq, FileAlignResultNew *result)
+{
+    int m = strlen(ref);
+    int n = strlen(seq);
+    int maxscore = 0, x = 0, y = 0;
+    std::vector<std::vector<int>> vec_matrix(m, std::vector<int>(n, 0));
+    std::vector<char> ref_back;
+    std::vector<char> seq_back;
+
+    for (int i = 0; i < m ; i++)
+    {
+        for (int j = 0; j < n ; j++)
+        {
+            if (equal(ref[i], seq[j]))
+            {
+                if (i == 0 || j == 0)
+                {
+                    vec_matrix[i][j] = 1;
+                }
+                else
+                {
+                    vec_matrix[i][j] = vec_matrix[i - 1][j - 1] + 1;
+                }
+            }
+
+            if (maxscore < vec_matrix[i][j])
+            {
+                maxscore = vec_matrix[i][j];
+                x = i;
+                y = j;
+            }
+        }
+    }
+
+    int ref_stop = x+1;
+    int seq_stop = y+1;
+
+    ref_back.clear();
+    seq_back.clear();
+    while (maxscore>0)
+    {
+        ref_back.push_back(ref[x--]);
+        seq_back.push_back(seq[y--]);
+        maxscore--;
+    }
+
+//    while (x >= 0 && y >= 0)
+//    {
+//        if (equal(ref[x], seq[y]))
+//        {
+//            ref_back.push_back(ref[x]);
+//            seq_back.push_back(seq[y]);
+//            x--;
+//            y--;
+//        }
+//        else
+//        {
+//            ref_back.push_back('-');
+//            seq_back.push_back(seq[y]);
+//            y--;
+//        }
+
+//    }
+
+    while (x >= 0)
+    {
+        ref_back.push_back(ref[x--]);
+        seq_back.push_back('-');
+    }
+
+    std::reverse(ref_back.begin(), ref_back.end());
+    std::reverse(seq_back.begin(), seq_back.end());
+
+    int dif_num = 0;
+    std::vector<char> ref_back_tmp;
+    std::vector<char> seq_back_tmp;
+    int ref_stop_tmp = ref_stop;
+    int seq_stop_tmp = seq_stop;
+    while (ref_stop < m && seq_stop< n)
+    {
+        if (equal(ref[ref_stop], seq[seq_stop]))
+        {
+            ref_back_tmp.push_back(ref[ref_stop]);
+            seq_back_tmp.push_back(seq[seq_stop]);
+            ref_stop++;
+            seq_stop++;
+        }
+        else
+        {
+            ref_back_tmp.push_back('-');
+            seq_back_tmp.push_back(seq[seq_stop]);
+            seq_stop++;
+            dif_num++;
+        }
+    }
+
+    if(dif_num > 5) //不一致的过多
+    {
+        ref_stop = ref_stop_tmp;
+        seq_stop = seq_stop_tmp;
+//        seq_stop = seq_stop_tmp+(m-ref_stop);
+//        if(seq_stop>n)
+//        {
+//            seq_stop = n;
+//        }
+    }
+    else
+    {
+        for(auto it=ref_back_tmp.begin();it!=ref_back_tmp.end();it++)
+        {
+            ref_back.push_back(*it);
+        }
+
+        for(auto it=seq_back_tmp.begin();it!=seq_back_tmp.end();it++)
+        {
+            seq_back.push_back(*it);
+        }
+    }
+    while (ref_stop < m)
+    {
+        ref_back.push_back(ref[ref_stop]);
+        seq_back.push_back('-');
+        ref_stop++;
+    }
+
+    result->consensus_alignment.append(ref_back.data(), ref_back.size());
+    result->sample_alignment.append(seq_back.data(), seq_back.size());
+    result->left_cut = y+1;
+    result->right_cut = seq_stop;
+    result->is_match = true;
 }

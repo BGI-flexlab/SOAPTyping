@@ -609,7 +609,7 @@ void SoapTypingDB::getAlleleInfosFromStaticDatabase(const QString &geneName, int
                 }
                 else
                 {
-                    for(int i=minExonIndex; i<min; i++)
+                    for(int i=minExonIndex; i<min; i++) //样品外显子范围超过了该型别的外显子范围
                     {
                         alleleInfo.starInfo.append(QString("*%1").arg(i));
                     }
@@ -634,7 +634,7 @@ void SoapTypingDB::getGsspPosAndSeqFromGsspDatabase(const QString &gsspName, int
     {
         while(query.next())
         {
-            gsspPos = query.value(0).toInt();
+            gsspPos = query.value(0).toInt()-1;
             gsspSeq = query.value(1).toString();
         }
     }
@@ -713,7 +713,7 @@ void SoapTypingDB::getSampleTreeDataFromSampleTable(QMap<QString,SampleTreeInfo_
     }
 }
 
-bool SoapTypingDB::getSampleanalysisType(const QString &samplename, int &analysisType, int &markType)
+bool SoapTypingDB::getSampleanalysisType(const QString &samplename, SampleTreeInfo_t &sampleTreeInfo)
 {
     QSqlQuery query(m_SqlDB);
     query.prepare("SELECT analysisType, markType FROM sampleTable where sampleName=?");
@@ -722,9 +722,11 @@ bool SoapTypingDB::getSampleanalysisType(const QString &samplename, int &analysi
     if(isSuccess)
     {
         if(query.next())
-        {
-            analysisType = query.value(0).toInt();
-            markType = query.value(1).toInt();
+        {           
+            sampleTreeInfo.analysisType = query.value(0).toInt();
+            sampleTreeInfo.markType = query.value(1).toInt();
+            getFileTreeInfosFromRealTimeDatabase(samplename, sampleTreeInfo.treeinfo);
+            getGsspFileTreeInfosFromRealTimeDatabase(samplename, sampleTreeInfo.treeinfo);
             return true;
         }
     }
@@ -1393,10 +1395,8 @@ void SoapTypingDB::getExonIndexAndGeneBySampleName(const QString &sampleName, in
 void SoapTypingDB::getGsspTablesFromGsspDatabase(const QString &geneName, int exon, QVector<GsspTable> &gsspTables)
 {
     QSqlQuery query(m_SqlDB);
-    //query.prepare("SELECT gsspName,rOrF,position,base FROM gsspTable WHERE geneName =? AND exonIndex=?");
     query.prepare("SELECT gsspName,rOrF,position,base FROM gsspTable WHERE geneName =?");
     query.bindValue(0, geneName);
-    //query.bindValue(1, exon);
     bool isSuccess = query.exec();
     if(isSuccess)
     {
@@ -1815,15 +1815,48 @@ bool SoapTypingDB::upDataExclude(bool isgssp, const QString &filename, int exclu
     QSqlQuery query(m_SqlDB);
     if(isgssp)
     {
-        query.prepare("UPDATE gsspFileTable SET excludeLeft=?,excludeRight=?  WHERE fileName=?");
+        if(exclude_left == -1)
+        {
+            query.prepare("UPDATE gsspFileTable SET excludeRight=?  WHERE fileName=?");
+            query.bindValue(0, exclude_right);
+            query.bindValue(1, filename);
+        }
+        else if(exclude_right == -1)
+        {
+            query.prepare("UPDATE gsspFileTable SET excludeLeft=? WHERE fileName=?");
+            query.bindValue(0, exclude_left);
+            query.bindValue(1, filename);
+        }
+        else
+        {
+            query.prepare("UPDATE gsspFileTable SET excludeLeft=?,excludeRight=?  WHERE fileName=?");
+            query.bindValue(0, exclude_left);
+            query.bindValue(1, exclude_right);
+        }
     }
     else
     {
-        query.prepare("UPDATE fileTable SET excludeLeft=?,excludeRight=?  WHERE fileName=?");
+        if(exclude_left == -1)
+        {
+            query.prepare("UPDATE fileTable SET excludeRight=?  WHERE fileName=?");
+            query.bindValue(0, exclude_right);
+            query.bindValue(1, filename);
+        }
+        else if(exclude_right == -1)
+        {
+            query.prepare("UPDATE fileTable SET excludeLeft=? WHERE fileName=?");
+            query.bindValue(0, exclude_left);
+            query.bindValue(1, filename);
+        }
+        else
+        {
+            query.prepare("UPDATE fileTable SET excludeLeft=?,excludeRight=?  WHERE fileName=?");
+            query.bindValue(0, exclude_left);
+            query.bindValue(1, exclude_right);
+            query.bindValue(2, filename);
+        }
     }
-    query.bindValue(0, exclude_left);
-    query.bindValue(1, exclude_right);
-    query.bindValue(2, filename);
+
     if(!query.exec())
     {
         return false;
@@ -2093,10 +2126,23 @@ void SoapTypingDB::readCommonGsspTableTxt(const QString &txtFile)
             {
                 CommonGsspTable commonGsspTable;
                 commonGsspTable.gsspName = part.at(0);
-                commonGsspTable.geneName = part.at(1);
                 commonGsspTable.exonIndex = part.at(2);
                 commonGsspTable.fOrR = part.at(3);
-                insertCommonGsspTable(commonGsspTable);
+                QString str_tmp = part.at(1);
+                if(str_tmp.contains(':'))
+                {
+                    QStringList str_gene_list = str_tmp.split(':');
+                    foreach(const QString &name, str_gene_list)
+                    {
+                        commonGsspTable.geneName = name;
+                        insertCommonGsspTable(commonGsspTable);
+                    }
+                }
+                else
+                {
+                    commonGsspTable.geneName = str_tmp;
+                    insertCommonGsspTable(commonGsspTable);
+                }
             }
         }
         file.close();

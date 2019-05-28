@@ -3,6 +3,7 @@
 #include <QThread>
 #include <QFuture>
 #include <QtConcurrent>
+#include <QSet>
 #include "Core/core.h"
 #include "DataBase/soaptypingdb.h"
 const int MAX_THREAD_NUM = 6;
@@ -119,7 +120,13 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
         }
         for(int j=0; j<size; j++){
 
-            if(alleleSeq[j]=='*' ||patternSeq[j]=='-' || alleleSeq[j]=='.' || patternSeq[j]=='N' || patternSeq[j]=='.'){
+//            if(alleleSeq[j]=='*' ||patternSeq[j]=='-' || alleleSeq[j]=='.' || patternSeq[j]=='N' || patternSeq[j]=='.'){
+//                continue;
+//            }
+            if(alleleSeq[j]=='*' ||patternSeq[j]=='-' || patternSeq[j]=='N') continue;
+            if(alleleSeq[j]=='.' || patternSeq[j]=='.')
+            {
+                mis++;
                 continue;
             }
             if(!isEqualPC(patternSeq[j], alleleSeq[j]))
@@ -136,30 +143,31 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
         }
     }
 
-    QSet<int> tmpSet;//缓存留下的allele
-    //取最好的前200个不带有*的序列
+    QSet<int> tmpset;//缓存留下的allele
+    //取最好的前200个不带有*的序列,最多不超过400
     for(QMap<int, int>::iterator it=tmpNomalPos.begin(); it!=tmpNomalPos.end(); it++){
         tmpCount++;
-        if(tmpCount>200 && it.key()>tmpMis){
+        if(tmpCount>400 || tmpCount>200 && it.key()>tmpMis){
                 break;
         }else{
             tmpMis = it.key();
         }
-        tmpSet.insert(it.value());
+        tmpset.insert(it.value());
     }
     tmpCount =0;tmpMis =0;
-    //取最好的前200个带有*的序列
+    //取最好的前200个带有*的序列,最多不超过400
     for(QMap<int, int>::iterator it=tmpStarPos.begin(); it!=tmpStarPos.end(); it++){
         tmpCount++;
-        if(tmpCount>200 && it.key()>tmpMis){
+        if(tmpCount>400 || tmpCount>200 && it.key()>tmpMis){
                 break;
         }else{
             tmpMis = it.key();
         }
-        tmpSet.insert(it.value());
+        tmpset.insert(it.value());
     }
+
     //**取原本方法中兼容的序列
-    QVector<int> pos;
+    /*QVector<int> pos;
     for(int i=0; i<size; i++)
     {
         switch(patternSeq[i])
@@ -205,11 +213,11 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
                 tmpSet.insert(i);
             }
         }
-    }
+    }*/
 
 
     for(int i=alleleSize-1; i>=0; i--){
-        if(!tmpSet.contains(i)){
+        if(!tmpset.contains(i)){
             alleleInfos.remove(i);
         }
     }
@@ -387,7 +395,7 @@ bool runComparePA(const char *patternSeq, QVector<AlleleInfo> &alleleInfos,
     int size = alleleInfos.size();
     int rLimit = 500;
     int maxTop = 10000;
-    qDebug()<<startIndex<<endIndex<<size;
+    qDebug()<<__FUNCTION__<<startIndex<<endIndex<<size;
     /*
      *Map中的顺序为[0错配[倒叙Allele], 1错配[倒叙Allele], 2, 3, ....]
      *这回导致如果0错配的比较多，比较小的Allele可能会被Erase掉，那么需要做一个保证，就是如果第500个错配和500个之后的错配数量如果相等的话，那么要将后边相等的错配保留下来。
@@ -403,28 +411,34 @@ bool runComparePA(const char *patternSeq, QVector<AlleleInfo> &alleleInfos,
 //                                                    alleleInfos.at(j), differentPosInfos.at(i),
 //                                                    differentPosInfos.at(j), alignInfo);
 
+            int i_indel = alleleInfos.at(i).isIndel + alleleInfos.at(j).isIndel;
+            if(i_indel != 0) //屏蔽插入和缺失的型别对
+            {
+                continue;
+            }
+
             int mis = compareByAlleleInfoAndDiffPos_new(patternSeq, alleleInfos.at(i),
                                                         alleleInfos.at(j), differentPosInfos.at(i),
                                                         differentPosInfos.at(j), difpos, alignInfo);
             typeResult->insertMulti(mis, alignInfo);
-            if(typeResult->size()>=maxTop)
-            {
-                QMap<int, QString>::iterator itp1, itp2, itp500;
-                itp1 = typeResult->end();
-                itp2 = typeResult->end();
-                itp500 = typeResult->begin()+500;
-                int mis = itp500.key();
-                itp2--;
-                for(int i=maxTop; i>rLimit; i--)
-                {
-                    if(itp2.key()==mis){
-                        break;
-                    }
-                    itp1 = itp2;
-                    itp2--;
-                    typeResult->erase(itp1);
-                }
-            }
+//            if(typeResult->size()>=maxTop)
+//            {
+//                QMap<int, QString>::iterator itp1, itp2, itp500;
+//                itp1 = typeResult->end();
+//                itp2 = typeResult->end();
+//                itp500 = typeResult->begin()+500;
+//                int mis = itp500.key();
+//                itp2--;
+//                for(int i=maxTop; i>rLimit; i--)
+//                {
+//                    if(itp2.key()==mis){
+//                        break;
+//                    }
+//                    itp1 = itp2;
+//                    itp2--;
+//                    typeResult->erase(itp1);
+//                }
+//            }
         }
     }
     return true;
@@ -458,22 +472,65 @@ int comparePatternWithAlleleByThread(char *patternSeq, QVector<AlleleInfo> &alle
         thread[i].waitForFinished();
     }
 
+    QMap<int,int> map_key;
     for(int i=0; i<MAX_THREAD_NUM; i++)
     {
-        for(QMap<int, QString>::iterator it=result[i].begin(); it!=result[i].end(); it++)
+        QList<int> lk = result[i].uniqueKeys();
+        foreach(int a, lk)
         {
-            typeResult.insertMulti(it.key(), it.value());
-            if(it.key()==0)
+            map_key.insert(a,0);
+        }
+    }
+
+    foreach(int a, map_key.keys())
+    {
+        if(a==0)
+        {
+            isFull = true;
+        }
+
+        for(int i=MAX_THREAD_NUM-1; i>=0; i--)
+        {
+            QList<QString> ls = result[i].values(a);
+            foreach(const QString &str, ls)
             {
-                isFull = true;
-                if(!it.value().contains("r"))
+                if(!str.contains("r"))
                 {
                     isRare = false;
                 }
+                if(typeResult.size() > 500)
+                {
+                    goto CLEAR;
+                }
+                typeResult.insertMulti(a, str);
             }
+
         }
+    }
+
+CLEAR:
+    for(int i=0; i<MAX_THREAD_NUM; i++)
+    {
         result[i].clear();
     }
+
+
+//    for(int i=0; i<MAX_THREAD_NUM; i++)
+//    {
+//        for(QMap<int, QString>::iterator it=result[i].begin(); it!=result[i].end(); it++)
+//        {
+//            typeResult.insertMulti(it.key(), it.value());
+//            if(it.key()==0)
+//            {
+//                isFull = true;
+//                if(!it.value().contains("r"))
+//                {
+//                    isRare = false;
+//                }
+//            }
+//        }
+//        result[i].clear();
+//    }
 
     delete []result;
     delete []thread;

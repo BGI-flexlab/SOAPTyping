@@ -22,9 +22,9 @@ private:
     void contextMenuEvent(QContextMenuEvent *event);
     void setGssp();
     bool processGssp(const QVector<AllelePair> &allelePairs, const QString &sampleName, QVector<QStringList> &result);
-    void findUsefulGssp(const char *seq11, const char *seq12, const char *seq21, const char *seq22,
-                        int exonStart, int exonEnd, QVector<GsspTable> &gsspTables,
-                        QStringList &gssps, QStringList &infos);
+//    void findUsefulGssp(const char *seq11, const char *seq12, const char *seq21, const char *seq22,
+//                        int exonStart, int exonEnd, QVector<GsspTable> &gsspTables,
+//                        QStringList &gssps, QStringList &infos);
 
 private slots:
     void slotClickIndelItem(QTableWidgetItem* itemNow);

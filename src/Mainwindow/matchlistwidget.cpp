@@ -44,10 +44,10 @@ void MatchListWidget::InitUI()
 
     QStringList defaultHead_;
     defaultHead_<<"  Mis"<<"Allele1"<<"Allele2"<<"Info"<<"GSSP";
-    this->setColumnWidth(0,60);
-    this->setColumnWidth(1,92);
-    this->setColumnWidth(2,92);
-    this->setColumnWidth(3,62);
+    this->setColumnWidth(0,40);
+    this->setColumnWidth(1,100);
+    this->setColumnWidth(2,100);
+    this->setColumnWidth(3,55);
     this->setColumnWidth(4,40);
     this->setHorizontalHeaderLabels(defaultHead_);
     QTableWidgetItem *itemArray = new QTableWidgetItem[I_ROWNUM * I_COLNUM];
@@ -124,20 +124,22 @@ void MatchListWidget::SetTableData(const QString &str_sample, const QString &str
     }
 
     m_iRowCount = m_strlist_result.size();
+    int i_row = 0;
     for(int i=0; i<m_iRowCount; i++)
     {
         QStringList line = m_strlist_result.at(i).split(",");
-        if(line.size() > 3 && line.at(3).toInt()!=0)
+        if(line.size() > 3 && line.at(3).toInt()!=0) //该型别对存在插入缺失的情况
         {
-            line[0].append("*");
+            //line[0].append("*");
+            continue;
         }
         line.removeAt(3);
         for(int j=0;j<line.size();j++)
         {
-            this->item(i, j)->setText(line.at(j));
+            this->item(i_row, j)->setText(line.at(j));
         }
-
-        if(i >= 500)
+        i_row++;
+        if(i_row >= 500)
         {
             m_iRowCount = 500;
             break;
@@ -342,7 +344,7 @@ void findUsefulGssp_new(const char *seq11, const char *seq12, const char *seq21,
 
     foreach(const GsspTable & gsspinfo, gsspTables)
     {
-        if(dif_pos.contains(gsspinfo.position))
+        if(dif_pos.contains(gsspinfo.position-1))
         {
             gssps.push_back(gsspinfo.gsspName);
             QChar ch11 = seq11[gsspinfo.position];
@@ -351,7 +353,7 @@ void findUsefulGssp_new(const char *seq11, const char *seq12, const char *seq21,
             QChar ch22 = seq22[gsspinfo.position];
 
             infos.push_back(QString("%1:%2:%3:%4:%5:%6:%7:%8:%9").arg(ch11).arg(ch12).arg(ch21).arg(ch22)
-                            .arg(gsspinfo.position+1)
+                            .arg(gsspinfo.position)
                             .arg(gsspinfo.exonIndex).arg(gsspinfo.rOrF)
                             .arg(gsspinfo.gsspName)
                             .arg(QString(gsspinfo.base)));
@@ -361,7 +363,7 @@ void findUsefulGssp_new(const char *seq11, const char *seq12, const char *seq21,
 
 }
 
-void MatchListWidget::findUsefulGssp(const char *seq11, const char *seq12, const char *seq21, const char *seq22,
+/*void MatchListWidget::findUsefulGssp(const char *seq11, const char *seq12, const char *seq21, const char *seq22,
                     int exonStart, int exonEnd, QVector<GsspTable> &gsspTables,
                     QStringList &gssps, QStringList &infos)
 {
@@ -510,7 +512,7 @@ void MatchListWidget::findUsefulGssp(const char *seq11, const char *seq12, const
                         .arg(QString(gsspTables.at(i).gsspName))
                         .arg(QString(gsspTables.at(i).base)));
     }
-}
+}*/
 
 bool MatchListWidget::processGssp(const QVector<AllelePair> &allelePairs, const QString &sampleName, QVector<QStringList> &result)
 {

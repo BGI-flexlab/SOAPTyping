@@ -189,7 +189,6 @@ void OpenFileDialog::SetProcessbarValue()
             connect(task, &AnalysisSampleThreadTask::analysisfinished, this, &OpenFileDialog::SetProcessbarValue);
             QThreadPool::globalInstance()->start(task);
         }
-
     }
     else if (m_iPrgvalue == ui->tableWidget->rowCount()+m_set_sample.size())
     {

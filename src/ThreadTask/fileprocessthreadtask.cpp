@@ -37,7 +37,7 @@ void fileprocessthreadtask::FilePathProcess(const QString &filePath, OpenFileTab
     }
     else
     {
-        info.sampleName = part.at(0).toString();
+        info.sampleName = part.at(0).toString().toUpper();
         info.geneName = part.at(1).toString();
         QString exonString = part.at(2).toString();
         if(exonString.size()==2 && (exonString.endsWith('F') || exonString.endsWith('R')))

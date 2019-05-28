@@ -279,7 +279,7 @@ void BaseAlignTableWidget::SetAlignTableData(QString &str_samplename,  QString &
         //line = info.gsspSeq;
         //for(int i=0; i<line.size(); i++)
         //{
-            item(3, info.gsspPostion - m_BaseAlignSampleInfo.alignStartPos + i_startColumn)->setText(info.gsspSeq);
+            //item(3, info.gsspPostion - m_BaseAlignSampleInfo.alignStartPos + i_startColumn)->setText(info.gsspSeq);
         //}
     }
 }

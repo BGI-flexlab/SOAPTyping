@@ -5,6 +5,16 @@
 #include <QIcon>
 #include <QSettings>
 
+typedef struct _tagMyalign
+{
+    std::vector<char> ref_back;
+    std::vector<char> seq_back;
+    int ref_start;
+    int ref_stop;
+    int seq_start;
+    int seq_stop;
+}Myalign;
+
 class Core
 {
 public:
@@ -32,6 +42,9 @@ public:
     void SetConfig(const QString &key, const QString &value);
     void GetConfig(const QString &key, QString &value);
     bool isEqualPC(char A, char B);
+    void zzk(const char *ref, const char *seq, Myalign &zlign);
+    bool zzk_boundary(const char *ref, const char *seq, Myalign &zlign, FileAlignResultNew *result);
+    void Align_LCS_new(const char *ref, const char *seq, FileAlignResultNew *result);
 private: //禁用构造函数
     Core();
     Core(const Core &){}

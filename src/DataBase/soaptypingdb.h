@@ -116,7 +116,7 @@ public:
     void StartTransaction();
     void EndTransaction();
     void getTypeResultFromSampleTable(const QString &sampleName, QMap<int, QString> &typeResult);
-    bool getSampleanalysisType(const QString &samplename, int &analysisType, int &markType);
+    bool getSampleanalysisType(const QString &samplename, SampleTreeInfo_t &sampleTreeInfo);
 private:
     bool InitDB();
 

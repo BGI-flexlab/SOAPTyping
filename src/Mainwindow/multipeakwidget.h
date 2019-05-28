@@ -56,8 +56,8 @@ public:
     void setXLeft(int x);
     int getXLeft();
 
-    void setDelpos(int pos);
-    QVector<int> &getDelpos();
+    void setXAlignStart(int pos);
+    int getXAlignStart();
 private:
     bool m_bGssp;
     int m_left_exclude;
@@ -80,7 +80,8 @@ private:
     QPolygonF m_vec_baseG;
     QPolygonF m_vec_baseC;
     QVector<GeneLetter> m_vec_GeneLetter;
-    QVector<int> m_vec_del;
+    //QVector<int> m_vec_del;
+    int m_x_AlignStart; //左对齐的坐标
 };
 
 

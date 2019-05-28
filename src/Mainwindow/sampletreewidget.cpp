@@ -205,10 +205,55 @@ void SampleTreeWidget::RefreshSelectSample(const QString &str_sample)
         QString str_name = topLevelItem(i)->text(0);
         if(str_name == str_sample)
         {
-            int analysisType=0;
-            int markType=0;
-            SoapTypingDB::GetInstance()->getSampleanalysisType(str_sample, analysisType, markType);
-            topLevelItem(i)->setIcon(0, Core::GetInstance()->getIcon(analysisType, markType));
+            SampleTreeInfo_t sampleTreeInfo;
+            SoapTypingDB::GetInstance()->getSampleanalysisType(str_sample, sampleTreeInfo);
+            topLevelItem(i)->setIcon(0, Core::GetInstance()->getIcon(sampleTreeInfo.analysisType, sampleTreeInfo.markType));
+            int treeSize=topLevelItem(i)->childCount();
+            for(int j=0; j<treeSize; j++)
+            {
+                QTreeWidgetItem *child = topLevelItem(i)->child(j);
+                QString strname = child->text(0);
+
+                if (strname == "Combined")
+                {
+                    child->setIcon(0, Core::GetInstance()->getIcon(sampleTreeInfo.analysisType, 0));
+                }
+                else
+                {
+                    const FileTreeInfo_t &fileTreeInfo = sampleTreeInfo.treeinfo.at(j);
+                    if(strname == fileTreeInfo.fileName)
+                    {
+                        if(!fileTreeInfo.isGssp)
+                        {
+                            if(fileTreeInfo.analysisType == 1)
+                            {
+                                child->setIcon(0, QIcon(":/png/images/filetreeFile2.png"));
+                            }
+                            else
+                            {
+                                child->setIcon(0, QIcon(QString(":/png/images/filetreeFile%1.png").arg(fileTreeInfo.isGood)));
+                            }
+                        }
+                        else
+                        {
+                            if(fileTreeInfo.analysisType == 4) //UNMATCH
+                            {
+                                child->setIcon(0, QIcon(":/png/images/filetreeFile2.png"));
+                            }
+                            else
+                            {
+                                child->setIcon(0, Core::GetInstance()->getIcon(fileTreeInfo.analysisType, 0));
+                            }
+                        }
+                    }
+                }
+            }
+
+            topLevelItem(i)->setSelected(true);
+            expandItem(topLevelItem(i));
+            setCurrentItem(topLevelItem(i)->child(0));
+            emit itemClicked(topLevelItem(i)->child(0), 0);
+
             break;
         }
     }

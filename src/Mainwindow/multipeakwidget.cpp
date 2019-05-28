@@ -16,6 +16,7 @@ const int PEAKLINEHIGHT = 160;
 const int HLINEHIGHT = 20;
 const int PEAK_X_STEP = 2;
 const int PEAK_Y_STEP = 5;
+const int PEAK_Y_HEIGHT = PEAKLINEHIGHT - 3*HLINEHIGHT;
 
 PeakLine::PeakLine(long size):m_lsize(size)
 {
@@ -190,14 +191,14 @@ int PeakLine::getXLeft()
     return m_x_left;
 }
 
-void PeakLine::setDelpos(int pos)
+void PeakLine::setXAlignStart(int pos)
 {
-    m_vec_del.push_back(pos);
+    m_x_AlignStart = pos;
 }
 
-QVector<int> &PeakLine::getDelpos()
+int PeakLine::getXAlignStart()
 {
-    return m_vec_del;
+    return m_x_AlignStart;
 }
 
 
@@ -278,7 +279,7 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index, cons
         return;
     }
     std::set<int> set_left,set_right; //以ExonStartPos和ExonEndPos为界，计算左右两边的长度
-    int len_exon = 0;
+    //int len_exon = 0;
     for(int i=0;i<i_count_peak;i++)
     {
         Ab1FileTableBase &table = m_vec_filetable[i];
@@ -297,12 +298,12 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index, cons
         pPeakLine->setPeakYSetp(PEAK_Y_STEP);
         pPeakLine->setPeakHeight(PEAKLINEHIGHT);
 
-        if(len_exon == 0)
-        {
-            m_start_exon = table.getExonStartPos();
-            m_end_exon = table.getExonEndPos();
-            len_exon = m_end_exon - m_start_exon;
-        }
+//        if(len_exon == 0)
+//        {
+//            m_start_exon = table.getExonStartPos();
+//            m_end_exon = table.getExonEndPos();
+//            len_exon = m_end_exon - m_start_exon;
+//        }
 
         m_vec_Peakline.push_back(pPeakLine);
     }
@@ -317,19 +318,20 @@ void MultiPeakWidget::CalcPeakLineData(int exon_pos)
         update();
         return;
     }
+    int i_sub = 0;
     for(int i=0;i<i_count_peak;i++)
     {
         Ab1FileTableBase &table = m_vec_filetable[i];
         long l_size = table.getSignalNumber();
 
         QVector<QStringRef> baseposion = table.getBasePostion().splitRef(':');
-
+        int x_alignstart = baseposion[table.getAlignStartPos()].toInt()*m_x_step;
         QVector<QStringRef> aligninfo = table.getAlignInfo().splitRef(':');
         QString ref(QString::number(exon_pos-1));
         int index = aligninfo.indexOf(&ref);//根据外显子坐标，找到对齐的峰图下标
-        int i_left = 0;
-        int i_right = 0;
-        if(index != -1) //没有超过峰图边界
+        int i_left = -1;
+        int i_right = -1;
+        if(index != -1)
         {
             if(i == m_index_PeakLine)
             {
@@ -338,6 +340,7 @@ void MultiPeakWidget::CalcPeakLineData(int exon_pos)
             int tmp = baseposion[index].toInt();
             i_left = tmp*m_x_step;
             i_right = (l_size - tmp)*m_x_step;
+            i_sub = i_left - x_alignstart;
         }
 
         set_left.insert(i_left);
@@ -345,6 +348,18 @@ void MultiPeakWidget::CalcPeakLineData(int exon_pos)
 
         QSharedPointer<PeakLine> pPeakLine = m_vec_Peakline[i];
         pPeakLine->setXLeft(i_left);
+        pPeakLine->setXAlignStart(x_alignstart);
+    }
+
+    for(int i=0;i<i_count_peak;i++) //调整index == -1的峰图下标
+    {
+        QSharedPointer<PeakLine> pPeakLine = m_vec_Peakline[i];
+        if(pPeakLine->getXLeft() == -1)
+        {
+            int left = pPeakLine->getXAlignStart() + i_sub;
+            pPeakLine->setXLeft(left);
+            set_left.insert(left);
+        }
     }
 
     Q_ASSERT(!set_left.empty());
@@ -360,6 +375,12 @@ void MultiPeakWidget::CalcPeakLineData(int exon_pos)
     SetPeakLineData();
 }
 
+double gety(int maxh,  int signal, double d_ystep)
+{
+    double tmp = signal * d_ystep;
+    double y = tmp > PEAK_Y_HEIGHT ? maxh - PEAK_Y_HEIGHT : maxh - tmp;
+    return y;
+}
 
 void MultiPeakWidget::SetPeakLineData()
 {
@@ -394,16 +415,20 @@ void MultiPeakWidget::SetPeakLineData()
         for(int i=0;i<l_size;i++)
         {
             double a_x = i*m_x_step+i_offset;
-            double a_y = m_iPeakHeightTotal-A_list[i].toInt()*d_ystep;
+            //double a_y = m_iPeakHeightTotal-A_list[i].toInt()*d_ystep;
+            double a_y = gety(m_iPeakHeightTotal, A_list[i].toInt(), d_ystep);
             pPeakLine->SetBasePoint('A',a_x,a_y);
 
-            double t_y = m_iPeakHeightTotal-T_list[i].toInt()*d_ystep;
+            //double t_y = m_iPeakHeightTotal-T_list[i].toInt()*d_ystep;
+            double t_y = gety(m_iPeakHeightTotal, T_list[i].toInt(), d_ystep);
             pPeakLine->SetBasePoint('T',a_x,t_y);
 
-            double g_y = m_iPeakHeightTotal-G_list[i].toInt()*d_ystep;
+            //double g_y = m_iPeakHeightTotal-G_list[i].toInt()*d_ystep;
+            double g_y = gety(m_iPeakHeightTotal, G_list[i].toInt(), d_ystep);
             pPeakLine->SetBasePoint('G',a_x,g_y);
 
-            double c_y = m_iPeakHeightTotal-C_list[i].toInt()*d_ystep;
+            //double c_y = m_iPeakHeightTotal-C_list[i].toInt()*d_ystep;
+            double c_y = gety(m_iPeakHeightTotal, C_list[i].toInt(), d_ystep);
             pPeakLine->SetBasePoint('C',a_x,c_y);
         }
 
@@ -612,9 +637,13 @@ void MultiPeakWidget::DrawExcludeArea(QPainter *pter)
         m_vec_Peakline[i]->GetExcludePos(left_exclude, right_exclude);
 
         QVector<GeneLetter> &vec_geneLetter = m_vec_Peakline[i]->GetGeneLetter();
+        if(right_exclude == vec_geneLetter.size())
+        {
+            right_exclude--;
+        }
         int w_left =  vec_geneLetter[left_exclude].pos.x();
         pter->drawRect(0,60+height_area, w_left, i_height-60);
-        int w_right = vec_geneLetter[right_exclude-1].pos.x();
+        int w_right = vec_geneLetter[right_exclude].pos.x();
         pter->drawRect(w_right,60+height_area, i_width, i_height-60);
     }
 }
@@ -1030,7 +1059,7 @@ void MultiPeakWidget::ExcludeArea(int type)
             SoapTypingDB::GetInstance()->upDataExclude(m_vec_Peakline[m_index_PeakLine]->GetGssp(),
                                                        m_vec_Peakline[m_index_PeakLine]->GetFileName(),
                                                        selectpos,
-                                                       m_vec_filetable[m_index_PeakLine].getExcludeRight());
+                                                       -1);
         }
         else if (type == 2)//调整右排除
         {
@@ -1038,7 +1067,7 @@ void MultiPeakWidget::ExcludeArea(int type)
             m_vec_Peakline[m_index_PeakLine]->SetExcludePos(-1, selectpos);
             SoapTypingDB::GetInstance()->upDataExclude(m_vec_Peakline[m_index_PeakLine]->GetGssp(),
                                                        m_vec_Peakline[m_index_PeakLine]->GetFileName(),
-                                                       m_vec_filetable[m_index_PeakLine].getExcludeLeft(),
+                                                       -1,
                                                        selectpos);
         }
 

@@ -500,7 +500,12 @@ void MainWindow::slotAlignPair()
 
 void MainWindow::slotAlignLab()
 {
-    QString str_gene = m_str_SelectFile.split('_').at(1);
+    QString str_gene("A");
+    if(!m_str_SelectFile.isEmpty())
+    {
+        str_gene = m_str_SelectFile.split('_').at(1);
+    }
+
     AlignmentDlg dlg(this, m_str_GeneVer, str_gene);
     dlg.exec();
 }
@@ -707,6 +712,8 @@ void MainWindow::slotClearAll()
     m_pMultiPeakWidget->ClearMultiPeak();
     m_pMultiPeakWidget->update();
     slotShowStatusBarMsg(QString("Ready"));
+    m_str_SelectFile.clear();
+    m_str_SelectSample.clear();
 }
 
 void MainWindow::slotPeakAct(int type)
