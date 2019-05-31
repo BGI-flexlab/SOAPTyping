@@ -571,7 +571,7 @@ void SoapTypingDB::getAlleleInfosFromStaticDatabase(const QString &geneName, int
 {
     QMutexLocker locker(&g_mutex);
     QSqlQuery query(m_SqlDB);
-    query.prepare("SELECT alleleName,alleleSequence,isRare,isIndel,noStar FROM alleleTable WHERE geneName=?");
+    query.prepare("SELECT alleleName,alleleSequence,isRare,isIndel,noStar FROM alleleTable WHERE geneName=? order by alleleName");
     query.bindValue(0, geneName);
     bool isSuccess = query.exec();
     if(isSuccess)

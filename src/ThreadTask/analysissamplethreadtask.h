@@ -19,7 +19,7 @@ signals:
 private:
     int comparePatternWithAllele(char *patternSeq,  char *consensusSeq, const QString &geneName,
                                  int exonStartPos, int minExonIndex, int maxExonIndex,
-                                 QMap<int, QString> &typeResult, QSet<QString> &sheildAlleles);
+                                 QVector<QString> &typeResult, QSet<QString> &sheildAlleles);
     int compareGsspWithAlleles(const QByteArray &gsspName, const char *gsspSequence, const QString &geneName,
                                int exonStartPos, QString &typeResult, QSet<QString> &zeroResult);
     void analysisSample(SampleInfo &sampleInfo, ExonInfo &exonInfo,

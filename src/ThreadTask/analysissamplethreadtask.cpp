@@ -6,7 +6,8 @@
 #include <QSet>
 #include "Core/core.h"
 #include "DataBase/soaptypingdb.h"
-const int MAX_THREAD_NUM = 6;
+const int MAX_THREAD_NUM = 1;
+const int I_ROWNUM = 800;
 AnalysisSampleThreadTask::AnalysisSampleThreadTask(const QString &str_sample):m_sample(str_sample)
 {
 
@@ -166,55 +167,6 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
         tmpset.insert(it.value());
     }
 
-    //**取原本方法中兼容的序列
-    /*QVector<int> pos;
-    for(int i=0; i<size; i++)
-    {
-        switch(patternSeq[i])
-        {
-        case 'A':
-            break;
-        case 'G':
-            break;
-        case 'T':
-            break;
-        case 'C':
-            break;
-        case '-':
-            break;
-        case 'N':
-            break;
-        case '.':
-            break;
-        default:
-            pos.push_back(i);
-            break;
-        }
-    }
-    int posSize = pos.size();
-    if(posSize>0){
-        for(int i=alleleInfos.size()-1; i>=0; i--)
-        {
-            bool keep = true;
-            const char *alleleSeq = alleleInfos.at(i).alleleSequence.data();
-            for(int j=0; j<posSize; j++)
-            {
-                if(alleleSeq[pos[j]]=='*' || alleleSeq[pos[j]]=='.')
-                {
-                    continue;
-                }
-                if(!isEqualPC(patternSeq[pos[j]], alleleSeq[pos[j]]))
-                {
-                    keep = false;
-                    break;
-                }
-            }
-            if(keep){
-                tmpSet.insert(i);
-            }
-        }
-    }*/
-
 
     for(int i=alleleSize-1; i>=0; i--){
         if(!tmpset.contains(i)){
@@ -244,14 +196,14 @@ void getDifferentPositionInfo(char *patternSeq, QVector<AlleleInfo> &alleleInfos
 
 int compareByAlleleInfoAndDiffPos_new(const char *patternSeq, const AlleleInfo &alleleInfoi,
                                   const AlleleInfo &alleleInfoj, const QVector<int> &diffInfoi,
-                                  const QVector<int> &diffInfoj, QSet<int> &difpos, QString &alignInfo)
+                                  const QVector<int> &diffInfoj, QSet<int> &difpos)
 {
     const char *alleleSeqi = alleleInfoi.alleleSequence.data();
     const char *alleleSeqj = alleleInfoj.alleleSequence.data();
-    alignInfo.append(QString("%1,%2,%3,%4%5%6%7").arg(alleleInfoi.alleleName)
-                     .arg(alleleInfoj.alleleName).arg(alleleInfoi.isIndel+alleleInfoj.isIndel)
-                     .arg(alleleInfoi.isRare).arg(alleleInfoj.isRare)
-                     .arg(alleleInfoi.starInfo).arg(alleleInfoj.starInfo));
+//    alignInfo.append(QString("%1,%2,%3,%4%5%6%7").arg(alleleInfoi.alleleName)
+//                     .arg(alleleInfoj.alleleName).arg(alleleInfoi.isIndel+alleleInfoj.isIndel)
+//                     .arg(alleleInfoi.isRare).arg(alleleInfoj.isRare)
+//                     .arg(alleleInfoi.starInfo).arg(alleleInfoj.starInfo));
     difpos.clear();
 
     foreach(int pos, diffInfoi)
@@ -393,15 +345,10 @@ bool runComparePA(const char *patternSeq, QVector<AlleleInfo> &alleleInfos,
     int startIndex = pair.startIndex;
     int endIndex = pair.endIndex;
     int size = alleleInfos.size();
-    int rLimit = 500;
-    int maxTop = 10000;
     qDebug()<<__FUNCTION__<<startIndex<<endIndex<<size;
-    /*
-     *Map中的顺序为[0错配[倒叙Allele], 1错配[倒叙Allele], 2, 3, ....]
-     *这回导致如果0错配的比较多，比较小的Allele可能会被Erase掉，那么需要做一个保证，就是如果第500个错配和500个之后的错配数量如果相等的话，那么要将后边相等的错配保留下来。
-     */
 
     QSet<int> difpos;
+    QMap<int, QMap<QString,QString>> order_map;
     for(int i=startIndex; i<endIndex; i++)
     {
         for(int j=i+1; j<size; j++)
@@ -410,7 +357,6 @@ bool runComparePA(const char *patternSeq, QVector<AlleleInfo> &alleleInfos,
 //            int mis = compareByAlleleInfoAndDiffPos(patternSeq, alleleInfos.at(i),
 //                                                    alleleInfos.at(j), differentPosInfos.at(i),
 //                                                    differentPosInfos.at(j), alignInfo);
-
             int i_indel = alleleInfos.at(i).isIndel + alleleInfos.at(j).isIndel;
             if(i_indel != 0) //屏蔽插入和缺失的型别对
             {
@@ -419,8 +365,14 @@ bool runComparePA(const char *patternSeq, QVector<AlleleInfo> &alleleInfos,
 
             int mis = compareByAlleleInfoAndDiffPos_new(patternSeq, alleleInfos.at(i),
                                                         alleleInfos.at(j), differentPosInfos.at(i),
-                                                        differentPosInfos.at(j), difpos, alignInfo);
+                                                        differentPosInfos.at(j), difpos);
+
             typeResult->insertMulti(mis, alignInfo);
+//            if(alleleInfos.at(i).alleleName.contains("DQB1*02:02") &&
+//               alleleInfos.at(j).alleleName.contains("DQB1*03:02"))
+//            {
+//                qDebug()<<alleleInfos.at(i).alleleName<<alleleInfos.at(j).alleleName<<mis;
+//            }
 //            if(typeResult->size()>=maxTop)
 //            {
 //                QMap<int, QString>::iterator itp1, itp2, itp500;
@@ -441,7 +393,183 @@ bool runComparePA(const char *patternSeq, QVector<AlleleInfo> &alleleInfos,
 //            }
         }
     }
+
     return true;
+}
+
+typedef struct _tagAlignindex
+{
+    int i;
+    int j;
+}Alignindex;
+
+typedef struct _tagtmp_str_z
+{
+    QString str1;
+    QString str2;
+}tmp_str_z;
+
+int comparePatternWithAllele_OneThread(char *patternSeq, QVector<AlleleInfo> &alleleInfos,
+                                 QVector< QVector<int> > &differentPosInfos, QVector<QString> &typeResult)
+{
+    bool isRare=true, isFull=false;
+    int size = alleleInfos.size();
+    QSet<int> difpos;
+    QMap<int, QMap<int, QMap<QString, Alignindex>>> order_map;
+    QMap<QString, tmp_str_z> map_test;
+    QFile file("d:\\test.ini");
+    if(file.open(QIODevice::ReadOnly))
+    {
+        QTextStream in(&file);
+        while (!in.atEnd())
+        {
+            QString str;
+            tmp_str_z str_z;
+            in>>str>>str_z.str1>>str_z.str2;
+            map_test.insert(str, str_z);
+        }
+        file.close();
+    }
+
+    QStringList str_list = alleleInfos.at(0).alleleName.split('*');
+
+    QString str1,str2;
+    if(map_test.contains(str_list[0]))
+    {
+        str1 = map_test.value(str_list[0]).str1;
+        str2 = map_test.value(str_list[0]).str2;
+    }
+
+    for(int i=0; i<size; i++)
+    {
+        for(int j=i+1; j<size; j++)
+        {
+//            QString alignInfo;
+//            int i_indel = alleleInfos.at(i).isIndel + alleleInfos.at(j).isIndel;
+//            if(i_indel != 0) //屏蔽插入和缺失的型别对
+//            {
+//                continue;
+//            }
+
+            int mis = compareByAlleleInfoAndDiffPos_new(patternSeq, alleleInfos.at(i),
+                                                        alleleInfos.at(j), differentPosInfos.at(i),
+                                                        differentPosInfos.at(j), difpos);
+
+
+            if(!str1.isEmpty() &&!str2.isEmpty() && alleleInfos.at(i).alleleName.contains(str1) &&
+               alleleInfos.at(j).alleleName.contains(str2))
+            {
+                qDebug()<<alleleInfos.at(i).alleleName<<alleleInfos.at(j).alleleName<<mis;
+            }
+
+            Alignindex index;
+            index.i = i;
+            index.j = j;
+            if(order_map.contains(mis))
+            {
+                QMap<int, QMap<QString, Alignindex>> &t_t_map = order_map[mis];
+                if(t_t_map.contains(i))
+                {
+                    QMap<QString,Alignindex> &t_map = order_map[mis][i];
+                    if(alleleInfos.at(j).alleleName.count(':')<3)
+                    {
+                        if(!t_map.contains(alleleInfos.at(j).alleleName))
+                        {
+                            t_map.insert(alleleInfos.at(j).alleleName, index);
+                        }
+                    }
+                    else
+                    {
+                        QString tmp_str = alleleInfos.at(j).alleleName.section(':',0,2);
+                        if(!t_map.contains(tmp_str))
+                        {
+                            t_map.insert(tmp_str, index);
+                        }
+                    }
+                }
+                else
+                {
+                    //QMap<int, QMap<QString, Alignindex>> t_t_map;
+                    QMap<QString,Alignindex> t_map;
+                    if(alleleInfos.at(j).alleleName.count(':')<3)
+                    {
+                        t_map.insert(alleleInfos.at(j).alleleName, index);
+                    }
+                    else
+                    {
+                        QString tmp_str = alleleInfos.at(j).alleleName.section(':',0,2);
+                        t_map.insert(tmp_str, index);
+                    }
+                    t_t_map.insert(i, t_map);
+                }
+            }
+            else
+            {
+                QMap<int, QMap<QString, Alignindex>> t_t_map;
+                QMap<QString,Alignindex> t_map;
+                if(alleleInfos.at(j).alleleName.count(':')<3)
+                {
+                    t_map.insert(alleleInfos.at(j).alleleName, index);
+                }
+                else
+                {
+                    QString tmp_str = alleleInfos.at(j).alleleName.section(':',0,2);
+                    t_map.insert(tmp_str, index);
+                }
+                t_t_map.insert(i, t_map);
+                order_map.insert(mis, t_t_map);
+            }
+        }
+    }
+
+    auto itor = order_map.begin();
+    for(;itor != order_map.end();itor++)
+    {
+        if(itor.key() == 0)
+        {
+            isFull = true;
+        }
+        QMap<int, QMap<QString, Alignindex>> &t_t_map = order_map[itor.key()];
+
+        auto t_t_itor = t_t_map.begin();
+        for(;t_t_itor != t_t_map.end(); t_t_itor++)
+        {
+            QMap<QString, Alignindex> &t_map = t_t_map[t_t_itor.key()];
+            foreach(const Alignindex &index, t_map.values())
+            {
+                const AlleleInfo &i_info = alleleInfos.at(index.i);
+                const AlleleInfo &j_info = alleleInfos.at(index.j);
+
+                QString alignInfo = QString("%1,%2,%3,%4,%5%6%7%8;").arg(itor.key()).arg(i_info.alleleName)
+                                             .arg(j_info.alleleName).arg(i_info.isIndel+j_info.isIndel)
+                                             .arg(i_info.isRare).arg(j_info.isRare)
+                                             .arg(i_info.starInfo).arg(j_info.starInfo);
+
+                if(isRare && !alignInfo.contains("r"))
+                {
+                    isRare = false;
+                }
+                typeResult.push_back(alignInfo);
+                if(typeResult.size()>1000)
+                {
+                    goto END;
+                }
+            }
+        }
+    }
+
+END:
+
+    if(isFull)
+    {
+        if(isRare)
+        {
+            return MATCHRARE;
+        }
+        return MATCHTOTAL;
+    }
+    return MISMATCH;
+
 }
 
 int comparePatternWithAlleleByThread(char *patternSeq, QVector<AlleleInfo> &alleleInfos,
@@ -492,19 +620,53 @@ int comparePatternWithAlleleByThread(char *patternSeq, QVector<AlleleInfo> &alle
         for(int i=MAX_THREAD_NUM-1; i>=0; i--)
         {
             QList<QString> ls = result[i].values(a);
-            foreach(const QString &str, ls)
+            if(ls.size()<=50)
             {
-                if(!str.contains("r"))
+                foreach(const QString &str, ls)
                 {
-                    isRare = false;
+                    if(!str.contains("r"))
+                    {
+                        isRare = false;
+                    }
+                    typeResult.insertMulti(a, str);
                 }
-                if(typeResult.size() > 500)
+            }
+            else
+            {
+//                auto itor = ls.end()-10;
+//                for(;itor != ls.end();itor++)
+//                {
+//                    if(!itor->contains("r"))
+//                    {
+//                        isRare = false;
+//                    }
+//                    typeResult.insertMulti(a, *itor);
+//                }
+                QStringRef s_ref;
+                int count = 0;
+                foreach(const QString &str, ls)
                 {
-                    goto CLEAR;
+                    QVector<QStringRef> v_sl = str.splitRef(',');
+                    if(s_ref == v_sl[0] && count++ > 10)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        s_ref = v_sl[0];
+                        count = 0;
+                    }
+
+                    typeResult.insertMulti(a, str);
                 }
-                typeResult.insertMulti(a, str);
+
+
             }
 
+            if(typeResult.size() > 800)
+            {
+                goto CLEAR;
+            }
         }
     }
 
@@ -550,7 +712,7 @@ CLEAR:
 int AnalysisSampleThreadTask::comparePatternWithAllele(char *patternSeq,  char *consensusSeq,
                                                        const QString &geneName,
                                                        int exonStartPos, int minExonIndex, int maxExonIndex,
-                                                       QMap<int, QString> &typeResult, QSet<QString> &sheildAlleles)
+                                                       QVector<QString> &typeResult, QSet<QString> &sheildAlleles)
 {
     qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
     int length = strlen(patternSeq);
@@ -575,14 +737,28 @@ int AnalysisSampleThreadTask::comparePatternWithAllele(char *patternSeq,  char *
     }
     QVector< QVector<int> > differentPosInfos;
     getDifferentPositionInfo(patternSeq, alleleInfos, differentPosInfos);
-    int alignResult = comparePatternWithAlleleByThread(patternSeq, alleleInfos, differentPosInfos, typeResult);
+    //int alignResult = comparePatternWithAlleleByThread(patternSeq, alleleInfos, differentPosInfos, typeResult);
+    int alignResult = comparePatternWithAllele_OneThread(patternSeq, alleleInfos, differentPosInfos, typeResult);
     return alignResult;
+}
+
+void changeAlignMapToAlignString_vec(QVector<QString> &typeResult, QString &result)
+{
+    qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
+    int limit = I_ROWNUM;
+    int i=0;
+    for(QVector<QString>::iterator it=typeResult.begin(); it!=typeResult.end(); it++)
+    {
+        result.push_back(*it);
+        if(++i>=limit)
+            break;
+    }
 }
 
 void changeAlignMapToAlignString(QMap<int, QString> &typeResult, QString &result)
 {
     qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
-    int limit = 500;
+    int limit = I_ROWNUM;
     int i=0;
     for(QMap<int, QString>::iterator it=typeResult.begin(); it!=typeResult.end(); it++)
     {
@@ -593,25 +769,20 @@ void changeAlignMapToAlignString(QMap<int, QString> &typeResult, QString &result
     return;
 }
 
-void getZeroResultFromTypeResult(QMap<int, QString> &typeResult, QMap<int, QString> &zeroResult)
+void getZeroResultFromTypeResult(QVector<QString> &typeResult, QMap<int, QString> &zeroResult)
 {
-    //qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
-    //QMap<int, QString> newMap;
-    for(QMap<int ,QString>::iterator it = typeResult.begin(); it!= typeResult.end(); it++)
+    for(auto it = typeResult.begin(); it!= typeResult.end(); it++)
     {
-        if(it.key()==0)
+        if(it->startsWith('0'))
         {
-            zeroResult.insertMulti(it.key(), it.value());
+            QStringRef str = it->midRef(2);
+            zeroResult.insertMulti(0, str.toString());
         }
         else
         {
             break;
         }
     }
-//    for(QMap<int ,QString>::iterator it = newMap.begin(); it!= newMap.end(); it++)
-//    {
-//        zeroResult.insertMulti(it.key(), it.value());
-//    }
 }
 
 int AnalysisSampleThreadTask::compareGsspWithAlleles(const QByteArray &gsspName, const char *gsspSequence,
@@ -651,19 +822,21 @@ int AnalysisSampleThreadTask::compareGsspWithAlleles(const QByteArray &gsspName,
     return MISMATCH;
 }
 
-void getFilterResult(QString &result, QMap<int, QString> &typeResult, QSet<QString> &zeroAlleles, const QString &name)
+void getFilterResult(QString &result, QVector<QString> &typeResult, QSet<QString> &zeroAlleles, const QString &name)
 {
     if(typeResult.size() <= 0 || zeroAlleles.size() <= 0)
         return;
 
-    int limit = 500;
+    int limit = I_ROWNUM;
     int i = 0;
-    for(QMap<int ,QString>::iterator it = typeResult.begin(); it!= typeResult.end(); it++)
+    for(auto it = typeResult.begin(); it!= typeResult.end(); it++)
     {
-        QStringList line = it.value().split(",");
-        if(zeroAlleles.contains(line.at(0)) || zeroAlleles.contains(line.at(1)))
+        QStringList line = it->split(",");
+        //QVector<QStringRef> v_s = it->splitRef(',');
+        if(zeroAlleles.contains(line[1]) || zeroAlleles.contains(line[2]))
         {
-            result.push_back(QString("%1%2,%3;").arg(it.key()).arg(name).arg(it.value()));
+            QStringRef str = it->midRef(line[0].length()+1);
+            result.push_back(QString("%1%2,%3").arg(line[0]).arg(name).arg(str));
             if(++i>=limit)
                 break;
         }
@@ -734,7 +907,7 @@ void AnalysisSampleThreadTask::analysisSample(SampleInfo &sampleInfo, ExonInfo &
             editPosList.push_back(QString::number(*it));
         }
     }
-    QMap<int, QString> typeResult;
+    QVector<QString> typeResult;
     int result = 0;
     if(fileInfos.size()>0)
     {
@@ -756,7 +929,7 @@ void AnalysisSampleThreadTask::analysisSample(SampleInfo &sampleInfo, ExonInfo &
         result = comparePatternWithAllele(sampleInfo.patternSequence.data(), sampleInfo.consensusSequence.data(),
                                           sampleInfo.geneName, sampleInfo.exonStartPos, sampleInfo.minExonIndex,
                                           sampleInfo.maxExonIndex, typeResult, shieldAlleles);
-        changeAlignMapToAlignString(typeResult, sampleInfo.typeResult);
+        changeAlignMapToAlignString_vec(typeResult, sampleInfo.typeResult);
         sampleInfo.mismatchBetweenPC = pcDifferenceList.join(":");
         sampleInfo.mismatchBetweenFR = frDifferenceList.join(":");
         sampleInfo.mmismatchBetweenFR = frUnequlList.join(":");

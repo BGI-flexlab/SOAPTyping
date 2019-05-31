@@ -10,7 +10,7 @@
 #include "log/log.h"
 
 const int I_COLNUM = 5;
-const int I_ROWNUM = 500;
+const int I_ROWNUM = 800;
 const int MIN_GAP = 50;
 
 MatchListWidget::MatchListWidget(QWidget *parent)
@@ -130,8 +130,8 @@ void MatchListWidget::SetTableData(const QString &str_sample, const QString &str
         QStringList line = m_strlist_result.at(i).split(",");
         if(line.size() > 3 && line.at(3).toInt()!=0) //该型别对存在插入缺失的情况
         {
-            //line[0].append("*");
-            continue;
+            line[0].append("*");
+            //continue;
         }
         line.removeAt(3);
         for(int j=0;j<line.size();j++)
@@ -139,9 +139,9 @@ void MatchListWidget::SetTableData(const QString &str_sample, const QString &str
             this->item(i_row, j)->setText(line.at(j));
         }
         i_row++;
-        if(i_row >= 500)
+        if(i_row >= I_ROWNUM)
         {
-            m_iRowCount = 500;
+            m_iRowCount = I_ROWNUM;
             break;
         }
     }
