@@ -63,7 +63,7 @@ The recommended version of QT and QT creator you should download is :
 5.  cp ./soaptyping ../dependence
 6.  ./soaptyping to run the SoapTyping
 
-##Installation
+## Installation
 
 1. Download the installation-free executable program from github
 
