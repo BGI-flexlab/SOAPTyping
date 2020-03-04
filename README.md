@@ -30,7 +30,7 @@ The outline of the HLA typing workflow using SOAPTyping can be described as foll
 
 ------
 
-## Installation
+## Source compilation
 SOAPTyping is developed by C++ and QT 5.11.1. The old version of SOAPTyping is developed using QT 4.8.7.
 
 ### Prepare the environment
@@ -62,6 +62,18 @@ The recommended version of QT and QT creator you should download is :
 4.  make
 5.  cp ./soaptyping ../dependence
 6.  ./soaptyping to run the SoapTyping
+
+##Installation
+
+1. Download the installation-free executable program from github
+
+### Windows
+2. Decompress the zipfile and run the soaptyping.exe
+
+### Ubuntu
+2. Decompress the gzfile 
+3. Open a shell and enter the target dir
+4. Run ./soaptyping.sh
 ----
 
 ## Propositional Workflow
