@@ -10,7 +10,7 @@
 #include "log/log.h"
 
 const int I_COLNUM = 5;
-const int I_ROWNUM = 800;
+const int I_ROWNUM = 500;
 const int MIN_GAP = 50;
 
 MatchListWidget::MatchListWidget(QWidget *parent)
@@ -145,10 +145,11 @@ void MatchListWidget::SetTableData(const QString &str_sample, const QString &str
             break;
         }
     }
+    update();
     if(m_iRowCount && b_setgssp)
     {
         m_str_SampleName = str_sample;
-        setGssp();
+        //setGssp();
     }
 }
 
@@ -293,6 +294,7 @@ void MatchListWidget::slotRowChanged(QTableWidgetItem* itemNow)
 
 void MatchListWidget::slotShowGsspZCode()
 {
+    setGssp();
     GsspInfoDlg gssp(this);
     gssp.setSampleName(m_str_SampleName);
     gssp.setGsspTable1(m_vec_gsspInfo);
@@ -588,6 +590,10 @@ bool MatchListWidget::processGssp(const QVector<AllelePair> &allelePairs, const 
             re.push_back(gssps.join(":"));
             re.push_back(infos.join(";"));
             result.push_back(re);
+            if(result.size()>50)
+            {
+                return true;
+            }
         }
     }
     if(result.size()==0)

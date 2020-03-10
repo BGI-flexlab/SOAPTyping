@@ -34,7 +34,7 @@ void mergeFileSequenceToSampleSequence(char *fileSequence, char *sampleSequence)
 void mergeForwardAndReverseToPattern(char *forwardSeq, char *reverseSeq, char *patternSeq,
                                      int exonStartPos, QStringList &frDifferenceList, QStringList &frUnequlList)
 {
-    qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
+    //qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
     int size = strlen(patternSeq);
     for(int i=0; i<size; i++)
     {
@@ -89,7 +89,7 @@ bool isEqualPC(char A, char B) //A包含B
 
 void comparePatternWithConsensus(char *patternSeq, char *consensusSeq, int exonStartPos, QStringList &pcDifferenceList)
 {
-    qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
+    //qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
     int size = strlen(patternSeq) < strlen(consensusSeq) ? strlen(patternSeq):strlen(consensusSeq);
     for(int i=0; i<size; i++)
     {
@@ -731,7 +731,7 @@ int AnalysisSampleThreadTask::comparePatternWithAllele(char *patternSeq,  char *
                                                        int exonStartPos, int minExonIndex, int maxExonIndex,
                                                        QVector<QString> &typeResult, QSet<QString> &sheildAlleles)
 {
-    qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
+    //qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
     int length = strlen(patternSeq);
     if(length<=0)
         return UNMATCH;
@@ -761,7 +761,7 @@ int AnalysisSampleThreadTask::comparePatternWithAllele(char *patternSeq,  char *
 
 void changeAlignMapToAlignString_vec(QVector<QString> &typeResult, QString &result)
 {
-    qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
+    //qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
     int limit = I_ROWNUM;
     int i=0;
     for(QVector<QString>::iterator it=typeResult.begin(); it!=typeResult.end(); it++)
@@ -774,7 +774,7 @@ void changeAlignMapToAlignString_vec(QVector<QString> &typeResult, QString &resu
 
 void changeAlignMapToAlignString(QMap<int, QString> &typeResult, QString &result)
 {
-    qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
+    //qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
     int limit = I_ROWNUM;
     int i=0;
     for(QMap<int, QString>::iterator it=typeResult.begin(); it!=typeResult.end(); it++)
@@ -806,7 +806,7 @@ int AnalysisSampleThreadTask::compareGsspWithAlleles(const QByteArray &gsspName,
                                                      const QString &geneName, int exonStartPos,
                                                      QString &typeResult, QSet<QString> &zeroResult)
 {
-    qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
+    //qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
     int gsspL = (int)strlen(gsspSequence);
     QVector<GsspAlleleInfo> gsspAlleleInfos;
     SoapTypingDB::GetInstance()->getGsspAlleleInfosFromStaticDatabase(geneName, exonStartPos, gsspL,
@@ -890,7 +890,7 @@ void getCombinedResult(QMap<int, QString> &typeResult, QSet<QString> &zeroAllele
 void AnalysisSampleThreadTask::analysisSample(SampleInfo &sampleInfo, ExonInfo &exonInfo,
                     QVector<FileInfo>& fileInfos, QVector<FileInfo>& gsspFileInfos)
 {
-    qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
+    //qDebug()<<(long)QThread::currentThreadId<<__FUNCTION__;
     bool isGood;
     sampleInfo.minExonIndex = exonInfo.minExonIndex;
     sampleInfo.maxExonIndex = exonInfo.maxExonIndex;

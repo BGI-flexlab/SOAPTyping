@@ -652,7 +652,7 @@ void SoapTypingDB::getGsspAlleleInfosFromStaticDatabase(const QString &geneName,
     int gssp_pos;
     QString gssp_seq;
 
-    getGsspPosAndSeqFromGsspDatabase(gsspName, gssp_pos, gssp_seq);
+    //getGsspPosAndSeqFromGsspDatabase(gsspName, gssp_pos, gssp_seq);
 
     if(isSuccess)
     {
@@ -661,8 +661,8 @@ void SoapTypingDB::getGsspAlleleInfosFromStaticDatabase(const QString &geneName,
             GsspAlleleInfo gsspAlleleInfo;
             gsspAlleleInfo.alleleName = query.value(0).toString();
             QByteArray alleleSequence = query.value(1).toByteArray();
-            if(alleleSequence[gssp_pos]!=gssp_seq[0].toLatin1())
-                continue;
+//            if(alleleSequence[gssp_pos]!=gssp_seq[0].toLatin1())
+//                continue;
 
             gsspAlleleInfo.alleleSequence = alleleSequence.mid(exonStartPos, gsspLength);
             gsspAlleleInfos.push_back(gsspAlleleInfo);//i2++;

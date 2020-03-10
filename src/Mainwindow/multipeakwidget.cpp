@@ -342,6 +342,10 @@ void MultiPeakWidget::CalcPeakLineData(int exon_pos)
             i_right = (l_size - tmp)*m_x_step;
             i_sub = i_left - x_alignstart;
         }
+        else
+        {
+            i_right = l_size *m_x_step;
+        }
 
         set_left.insert(i_left);
         set_right.insert(i_right);
