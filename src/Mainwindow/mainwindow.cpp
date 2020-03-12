@@ -40,6 +40,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    m_bChangeDB = false;
     ui->setupUi(this);
     InitUI();
     ConnectSignalandSlot();
@@ -255,7 +256,7 @@ void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
     QString strfile = item->text(0);
     QString str_info = item->text(1);
     LOG_DEBUG("%s",strfile.toStdString().c_str());
-    m_pMatchListWidget->SetTableData(str_sample,strfile, str_info, col);
+    //m_pMatchListWidget->SetTableData(str_sample,strfile, str_info, col);
 
     if(!strfile.contains(".ab1"))//如果不是ab1文件，左侧的模块不用刷新
     {
@@ -290,19 +291,27 @@ void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
 
     int i_sub = selectpos - exonstartpos;
     m_pMultiPeakWidget->SetSelectPos(selectpos,270);
+
+    m_pMatchListWidget->SetTableData(str_sample,strfile, str_info, col);
 }
 
 //导航条起始pos,选中的峰图pos，选中的导航条起始pos,选中的导航条index
 void MainWindow::slotExonFocusPosition(int startpos, int selectpos, int exonstartpos, int index)
 {
+    if(m_bChangeDB)
+    {
+        m_bChangeDB = false;
+        return;
+    }
     LOG_DEBUG("%d %d %d %d",startpos, selectpos, exonstartpos, index);
     int i_columnPos = selectpos - startpos; //二者之差为表格的第几列
     int sliderPos = i_columnPos*25-8;
     m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
     m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
 
-    int i_sub = selectpos - exonstartpos;
-    m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
+    //int i_sub = selectpos - exonstartpos;
+    //m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
+    m_pSampleTreeWidget->SetSelectItemByName(m_str_SelectSample, m_str_SelectFile);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
     m_pMultiPeakWidget->SetSelectPos(selectpos,270);
 }
@@ -328,7 +337,8 @@ void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
     LOG_DEBUG("%d %d %d %d",i_colnum, selectpos, exonstartpos ,index);
 
     int i_sub = selectpos - exonstartpos;
-    m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
+    //m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
+    m_pSampleTreeWidget->SetSelectItemByName(m_str_SelectSample, m_str_SelectFile);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
     m_pMultiPeakWidget->SetSelectPos(selectpos, xx);
 }
@@ -345,6 +355,7 @@ void MainWindow::slotPeakFocusPosition(int index, int colnum, QPoint &pos)
 
 void MainWindow::slotChangePeak(QString &str_file)
 {
+    m_str_SelectFile = str_file;
     m_pSampleTreeWidget->SetSelectItemByName( m_str_SelectSample, str_file);
 }
 
@@ -647,7 +658,7 @@ void MainWindow::slotChangeDB(const QString &str_samplename)
     btn->setVisible(false);
     msg.doTask(str_samplename);
     msg.exec();
-
+    m_bChangeDB = true;
     m_pMatchListWidget->SetRefresh(true);
     m_pExonNavigatorWidget->SetRefresh(true);
     m_pBaseAlignTableWidget->SetRefresh(true);
@@ -656,9 +667,10 @@ void MainWindow::slotChangeDB(const QString &str_samplename)
 
     QString str_info = m_pSelectItem->text(1);
     QString str_gene = m_str_SelectFile.split('_').at(1);
-    m_pMatchListWidget->SetTableData(m_str_SelectSample, m_str_SelectFile, str_info, 0);
+    //m_pMatchListWidget->SetTableData(m_str_SelectSample, m_str_SelectFile, str_info, 0);
     m_pExonNavigatorWidget->SetExonData(m_str_SelectSample, str_gene);
     m_pBaseAlignTableWidget->SetAlignTableData(m_str_SelectSample,m_str_SelectFile, str_info, 0);
+    m_pMatchListWidget->SetTableData(m_str_SelectSample, m_str_SelectFile, str_info, 0);
 }
 
 //由于样品文件的删除，导致数据库发生变化，需要重新刷新界面

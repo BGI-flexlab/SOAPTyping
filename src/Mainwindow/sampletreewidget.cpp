@@ -251,8 +251,8 @@ void SampleTreeWidget::RefreshSelectSample(const QString &str_sample)
 
             topLevelItem(i)->setSelected(true);
             expandItem(topLevelItem(i));
-            setCurrentItem(topLevelItem(i)->child(0));
-            emit itemClicked(topLevelItem(i)->child(0), 0);
+            //setCurrentItem(topLevelItem(i)->child(0));
+            //emit itemClicked(topLevelItem(i)->child(0), 0);
 
             break;
         }
