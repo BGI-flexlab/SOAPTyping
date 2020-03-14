@@ -70,10 +70,14 @@ The recommended version of QT and QT creator you should download is :
 ### Windows
 2. Decompress the zipfile and run the soaptyping.exe
 
-### Ubuntu
-2. Decompress the gzfile 
-3. Open a shell and enter the target dir
-4. Run ./soaptyping.sh
+### Linux(tested on Ubuntu)
+1. Decompress the gzfile 
+2. Open a shell and enter the target dir
+3. Run ./soaptyping.sh
+
+### Mac
+1.Decompress the zipfile and run ./soaptyping
+
 ----
 
 ## Propositional Workflow
