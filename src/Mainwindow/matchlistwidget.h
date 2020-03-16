@@ -15,6 +15,7 @@ public:
     QStringList & GetMatchList();
     void SetRefresh(bool refresh){m_bRefresh = refresh;}
     void ClearTable();
+    void setAllelePairData();
 private:
     void InitUI();
     void CreateRightMenu();

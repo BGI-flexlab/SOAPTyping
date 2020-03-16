@@ -146,16 +146,8 @@ void MatchListWidget::SetTableData(const QString &str_sample, const QString &str
         }
     }
 
-    m_iOldRow = 0;
-    setCurrentItem(item(m_iOldRow, 1));
-    QString allele1 = item(m_iOldRow, 1)->text();
-    QString allele2 = item(m_iOldRow, 2)->text();
-    if(allele2.isEmpty())
-    {
-        allele2 = allele1;
-    }
-
-    emit signalAllelePair(allele1, allele2);
+    m_iOldRow = -1;
+    setCurrentItem(NULL);
 
     update();
     if(m_iRowCount && b_setgssp)
@@ -163,6 +155,19 @@ void MatchListWidget::SetTableData(const QString &str_sample, const QString &str
         m_str_SampleName = str_sample;
         //setGssp();
     }
+}
+
+void MatchListWidget::setAllelePairData()
+{
+    setCurrentItem(item(0, 1));
+    QString allele1 = item(0, 1)->text();
+    QString allele2 = item(0, 2)->text();
+    if(allele2.isEmpty())
+    {
+        allele2 = allele1;
+    }
+
+    emit signalAllelePair(allele1, allele2);
 }
 
 QStringList & MatchListWidget::GetMatchList()

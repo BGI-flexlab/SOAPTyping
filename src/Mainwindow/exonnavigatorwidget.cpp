@@ -442,7 +442,11 @@ void ExonNavigatorWidget::SetTypeMisPos(QSet<int> &typeMismatchPos)
         m_map_typemispos.insert(*it, 0);
         m_map_TotalMisPos.insert(*it, 0);
     }
-
+    if(typeMismatchPos.isEmpty())
+    {
+        update();
+        return;
+    }
     m_iSelectPeakPos = m_map_typemispos.firstKey()+1;
     update();
     foreach(const Exon &exon, m_vec_Exon)

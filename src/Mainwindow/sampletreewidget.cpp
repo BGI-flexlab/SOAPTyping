@@ -142,7 +142,8 @@ void SampleTreeWidget::SetTreeData()
                 else
                 {
                     child->setText(1, QString("%1%2").arg(fileTreeInfo.exonIndex).arg(fileTreeInfo.rOrF));
-                    child->setIcon(0, QIcon(QString(":/png/images/filetreeFile%1.png").arg(fileTreeInfo.isGood)));
+                    //child->setIcon(0, QIcon(QString(":/png/images/filetreeFile%1.png").arg(fileTreeInfo.isGood)));
+                    child->setIcon(0, Core::GetInstance()->getIcon(sampleTreeInfo.analysisType, 0));
                 }
             }
             else
@@ -231,7 +232,8 @@ void SampleTreeWidget::RefreshSelectSample(const QString &str_sample)
                             }
                             else
                             {
-                                child->setIcon(0, QIcon(QString(":/png/images/filetreeFile%1.png").arg(fileTreeInfo.isGood)));
+                                //child->setIcon(0, QIcon(QString(":/png/images/filetreeFile%1.png").arg(fileTreeInfo.isGood)));
+                                child->setIcon(0, Core::GetInstance()->getIcon(sampleTreeInfo.analysisType, 0));
                             }
                         }
                         else

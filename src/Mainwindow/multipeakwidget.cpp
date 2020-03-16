@@ -344,7 +344,25 @@ void MultiPeakWidget::CalcPeakLineData(int exon_pos)
         }
         else
         {
-            i_right = l_size *m_x_step;
+            int leftalgin = 0;
+            for(QStringRef str : aligninfo)
+            {
+                if(str != "-1")
+                {
+                    leftalgin = str.toInt();
+                    break;
+                }
+            }
+
+            if(exon_pos-1 < leftalgin)
+            {
+                i_left = 0;
+                i_right = l_size *m_x_step;
+            }
+            else {
+                i_left = l_size *m_x_step;
+                i_right = 0;
+            }
         }
 
         set_left.insert(i_left);
@@ -355,16 +373,16 @@ void MultiPeakWidget::CalcPeakLineData(int exon_pos)
         pPeakLine->setXAlignStart(x_alignstart);
     }
 
-    for(int i=0;i<i_count_peak;i++) //调整index == -1的峰图下标
-    {
-        QSharedPointer<PeakLine> pPeakLine = m_vec_Peakline[i];
-        if(pPeakLine->getXLeft() == -1)
-        {
-            int left = pPeakLine->getXAlignStart() + i_sub;
-            pPeakLine->setXLeft(left);
-            set_left.insert(left);
-        }
-    }
+//    for(int i=0;i<i_count_peak;i++) //调整index == -1的峰图下标
+//    {
+//        QSharedPointer<PeakLine> pPeakLine = m_vec_Peakline[i];
+//        if(pPeakLine->getXLeft() == -1)
+//        {
+//            int left = pPeakLine->getXAlignStart() - i_sub;
+//            pPeakLine->setXLeft(left);
+//            set_left.insert(left);
+//        }
+//    }
 
     Q_ASSERT(!set_left.empty());
     for(int i=0;i<i_count_peak;i++)

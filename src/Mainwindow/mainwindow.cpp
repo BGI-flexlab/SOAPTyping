@@ -310,8 +310,8 @@ void MainWindow::slotExonFocusPosition(int startpos, int selectpos, int exonstar
     m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
 
     //int i_sub = selectpos - exonstartpos;
-    //m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
-    m_pSampleTreeWidget->SetSelectItemByName(m_str_SelectSample, m_str_SelectFile);
+    m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
+    //m_pSampleTreeWidget->SetSelectItemByName(m_str_SelectSample, m_str_SelectFile);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
     m_pMultiPeakWidget->SetSelectPos(selectpos,270);
 }
@@ -671,6 +671,7 @@ void MainWindow::slotChangeDB(const QString &str_samplename)
     m_pExonNavigatorWidget->SetExonData(m_str_SelectSample, str_gene);
     m_pBaseAlignTableWidget->SetAlignTableData(m_str_SelectSample,m_str_SelectFile, str_info, 0);
     m_pMatchListWidget->SetTableData(m_str_SelectSample, m_str_SelectFile, str_info, 0);
+    m_pMatchListWidget->setAllelePairData();
 }
 
 //由于样品文件的删除，导致数据库发生变化，需要重新刷新界面
