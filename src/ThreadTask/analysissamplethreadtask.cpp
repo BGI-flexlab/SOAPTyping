@@ -786,14 +786,15 @@ void changeAlignMapToAlignString(QMap<int, QString> &typeResult, QString &result
     return;
 }
 
-void getZeroResultFromTypeResult(QVector<QString> &typeResult, QMap<int, QString> &zeroResult)
+void getZeroResultFromTypeResult(QVector<QString> &typeResult, QVector<QString> &zeroResult)
 {
     for(auto it = typeResult.begin(); it!= typeResult.end(); it++)
     {
         if(it->startsWith('0'))
         {
             QStringRef str = it->midRef(2);
-            zeroResult.insertMulti(0, str.toString());
+            //zeroResult.insertMulti(0, str.toString());
+            zeroResult.push_back(str.toString());
         }
         else
         {
@@ -860,31 +861,34 @@ void getFilterResult(QString &result, QVector<QString> &typeResult, QSet<QString
     }
 }
 
-void getCombinedResult(QMap<int, QString> &typeResult, QSet<QString> &zeroAlleles)
+void getCombinedResult(QVector<QString> &zeroResult, QSet<QString> &zeroAlleles)
 {
-    if(typeResult.size() <= 0)
+    if(zeroResult.size() <= 0)
         return;
     if(zeroAlleles.size()==0)
     {
-        typeResult.clear();
+        zeroResult.clear();
         return;
     }
 
-    QMap<int, QString> newMap;
-    for(QMap<int ,QString>::iterator it = typeResult.begin(); it!= typeResult.end(); it++)
+    QVector<QString> newvec;
+    for(auto it = zeroResult.begin(); it!= zeroResult.end(); it++)
     {
-        QStringList line = it.value().split(",");
+        QStringList line = it->split(",");
         if(zeroAlleles.contains(line.at(0)) || zeroAlleles.contains(line.at(1)))
         {
-            newMap.insertMulti(it.key(), it.value());
+            //newMap.insertMulti(it.key(), it.value());
+            newvec.push_back(*it);
         }
     }
-    typeResult.clear();
-    for(QMap<int ,QString>::iterator it = newMap.begin(); it!= newMap.end(); it++)
-    {
-        typeResult.insertMulti(it.key(), it.value());
-    }
-    newMap.clear();
+    //zeroResult.clear();
+
+    zeroResult.swap(newvec);
+//    for(QMap<int ,QString>::iterator it = newMap.begin(); it!= newMap.end(); it++)
+//    {
+//        typeResult.insertMulti(it.key(), it.value());
+//    }
+//    newMap.clear();
 }
 
 void AnalysisSampleThreadTask::analysisSample(SampleInfo &sampleInfo, ExonInfo &exonInfo,
@@ -962,7 +966,8 @@ void AnalysisSampleThreadTask::analysisSample(SampleInfo &sampleInfo, ExonInfo &
                                                    sampleInfo.exonStartPos, sampleInfo.exonEndPos-sampleInfo.exonStartPos);
         }
 
-        QMap<int, QString> zeroResult;
+        //QMap<int, QString> zeroResult;
+        QVector<QString> zeroResult;
         getZeroResultFromTypeResult(typeResult, zeroResult);
         for(int i=0; i<gsspFileInfos.size(); i++)
         {
@@ -983,7 +988,12 @@ void AnalysisSampleThreadTask::analysisSample(SampleInfo &sampleInfo, ExonInfo &
         }
         if(gsspFileInfos.size()>0)
         {
-            changeAlignMapToAlignString(zeroResult, sampleInfo.combinedResult);
+            for(auto it=zeroResult.begin(); it!=zeroResult.end(); it++)
+            {
+                sampleInfo.combinedResult.push_back(QString("%1,%2;").arg(0).arg(*it));
+                if(sampleInfo.combinedResult.size() >= I_ROWNUM)
+                    break;
+            }
         }
     }
     if(result<MISMATCH)

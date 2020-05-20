@@ -31,6 +31,7 @@
 #include <QCloseEvent>
 #include <QThreadPool>
 #include <QPushButton>
+#include "Core/core.h"
 
 //QT_CHARTS_USE_NAMESPACE
 
@@ -192,6 +193,7 @@ void MainWindow::InitData()
     SoapTypingDB::GetInstance()->deleteTable("gsspFileTable");
     SoapTypingDB::GetInstance()->deleteTable("sampleTable");
 #endif
+    Core::GetInstance()->SetConfig("Set/Ignore", "1");
 }
 
 void MainWindow::slotShowOpenDlg()
@@ -256,7 +258,12 @@ void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
     QString strfile = item->text(0);
     QString str_info = item->text(1);
     LOG_DEBUG("%s",strfile.toStdString().c_str());
-    //m_pMatchListWidget->SetTableData(str_sample,strfile, str_info, col);
+
+    if(strfile.contains("Combined"))
+    {
+        m_pMatchListWidget->SetTableData(str_sample,strfile, str_info, col);
+        return;
+    }
 
     if(!strfile.contains(".ab1"))//如果不是ab1文件，左侧的模块不用刷新
     {
@@ -629,7 +636,7 @@ void MainWindow::slotHelp()
     }
     else
     {
-        QMessageBox::warning(this, "SoapTyping", "Documents are missing!");
+        QDesktopServices::openUrl(QUrl("https://github.com/BGI-flexlab/SOAPTyping"));
     }
 }
 

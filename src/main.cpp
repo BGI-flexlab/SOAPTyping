@@ -4,30 +4,48 @@
 #include <QTextStream>
 #include "log/log.h"
 
-#ifndef QT_NO_DEBUG
 #include <qapplication.h>
+#include <QDateTime>
 void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
- {
-    QByteArray localMsg = msg.toLocal8Bit();
-    switch (type) {
-    case QtDebugMsg:
-        fprintf(stderr, "Debug: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtCriticalMsg:
-        fprintf(stderr, "Critical: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtFatalMsg:
-        fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
+{
+    if (type < QtDebugMsg)
+        return;
+    static char s_types[5][6] = {"DEBUG", "WARN ", "ERROR", "FATAL", "INFO "};
+    const char* szType = "DEBUG";
+    if (type < 5) {
+        szType = s_types[(int)type];
     }
- }
-#endif
+
+    QString strlog = QString::asprintf("[%s][%s] %s\n",
+                                       QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz").toLocal8Bit().data(),
+                                       szType,
+                                       msg.toLocal8Bit().data());
+
+
+    static FILE* s_fp = NULL;
+    if (s_fp) {
+        fseek(s_fp, 0, SEEK_END);
+        if (ftell(s_fp) > (2 << 20)) {
+            fclose(s_fp);
+            s_fp = NULL;
+        }
+    }
+
+    if (!s_fp) {
+        QString strLogfile = "log/qt_";
+        strLogfile.append(QDateTime::currentDateTime().toString("yyyyMMddhhmmss"));
+        strLogfile.append(".log");
+        s_fp = fopen(strLogfile.toLocal8Bit().data(), "w");
+    }
+
+    if (s_fp) {
+        fputs(strlog.toLocal8Bit().data(), s_fp);
+    }
+}
 
 int main(int argc, char *argv[])
 {
-#ifndef QT_NO_DEBUG
     //qInstallMessageHandler(myMessageOutput);
-#endif
     QApplication a(argc, argv);
 
     QFile qssF(":/qss/qss");
@@ -41,7 +59,9 @@ int main(int argc, char *argv[])
     log_init(LL_DEBUG,"test","./log");
 
     MainWindow w;
-    w.show();
     w.InitData();
+    w.show();
+
+    LOG_DEBUG("%s","SOAPTyping end");
     return a.exec();
 }

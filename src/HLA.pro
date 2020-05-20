@@ -108,3 +108,5 @@ RC_FILE += SoapTyping.rc
 DISTFILES += \
 
 mac:CONFIG -= app_bundle
+QMAKE_CXXFLAGS += -Wno-unused-parameter
+QMAKE_CXXFLAGS += -Wno-unused-variable

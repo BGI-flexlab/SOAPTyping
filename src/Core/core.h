@@ -26,10 +26,6 @@ public:
     ~Core();
     void AnalysisAb1();
     void GetFileAlignResult(FileAlignNew &file_align_new, FileAlignResult &result, bool auto_cut);
-    void Align_LCS(char *s1, char *s2, align *sg, int length);
-    bool Optimize_boundary(align *nw, FileAlignResultNew *result, bool auto_cut);
-//    unsigned int format(char a);
-//    char reformat(unsigned int a);
     int equal(char a, char b);
     char *reverse(char *s);
     bool can_merge(char A, char B);

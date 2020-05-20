@@ -1,5 +1,6 @@
 #include "setdlg.h"
 #include "ui_setdlg.h"
+#include "Core/core.h"
 
 SetDlg::SetDlg(QWidget *parent) :
     QDialog(parent),
@@ -7,6 +8,16 @@ SetDlg::SetDlg(QWidget *parent) :
 {
     ui->setupUi(this);
     ConnectSignalandSlot();
+    QString strig;
+    Core::GetInstance()->GetConfig("Set/Ignore", strig);
+    if(strig == "1")
+    {
+        ui->checkBox->setCheckState(Qt::Checked);
+    }
+    else
+    {
+        ui->checkBox->setCheckState(Qt::Unchecked);
+    }
 }
 
 SetDlg::~SetDlg()
@@ -23,10 +34,20 @@ void SetDlg::ConnectSignalandSlot()
 
 void SetDlg::slotClickResetButton()
 {
-
+    ui->checkBox->setCheckState(Qt::Checked);
+    Core::GetInstance()->SetConfig("Set/Ignore", "1");
 }
 
 void SetDlg::slotClickSaveButton()
 {
+    if(ui->checkBox->isChecked())
+    {
+        Core::GetInstance()->SetConfig("Set/Ignore", "1");
+    }
+    else
+    {
+        Core::GetInstance()->SetConfig("Set/Ignore", "0");
+    }
+
     close();
 }

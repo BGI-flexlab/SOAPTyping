@@ -8,6 +8,7 @@
 #include "Dialog/finaltypedlg.h"
 #include <QContextMenuEvent>
 #include "log/log.h"
+#include "Core/core.h"
 
 const int I_COLNUM = 5;
 const int I_ROWNUM = 500;
@@ -67,6 +68,7 @@ void MatchListWidget::InitUI()
             }
         }
     }
+    m_iRowCount = 0;
 }
 
 void MatchListWidget::ClearTable()
@@ -125,13 +127,23 @@ void MatchListWidget::SetTableData(const QString &str_sample, const QString &str
 
     m_iRowCount = m_strlist_result.size();
     int i_row = 0;
+    QString strig('1');
+    bool bignore = true;
+    Core::GetInstance()->GetConfig("Set/Ignore", strig);
+    if(strig == '0')
+    {
+        bignore = false;
+    }
     for(int i=0; i<m_iRowCount; i++)
     {
         QStringList line = m_strlist_result.at(i).split(",");
         if(line.size() > 3 && line.at(3).toInt()!=0) //该型别对存在插入缺失的情况
         {
             line[0].append("*");
-            //continue;
+            if(bignore)
+            {
+                continue;
+            }
         }
         line.removeAt(3);
         for(int j=0;j<line.size();j++)
@@ -145,7 +157,7 @@ void MatchListWidget::SetTableData(const QString &str_sample, const QString &str
             break;
         }
     }
-
+    m_iRowCount = i_row;
     m_iOldRow = -1;
     setCurrentItem(NULL);
 
