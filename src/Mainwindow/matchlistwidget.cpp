@@ -51,13 +51,14 @@ void MatchListWidget::InitUI()
     this->setColumnWidth(3,55);
     this->setColumnWidth(4,40);
     this->setHorizontalHeaderLabels(defaultHead_);
-    QTableWidgetItem *itemArray = new QTableWidgetItem[I_ROWNUM * I_COLNUM];
+    //QTableWidgetItem *itemArray = new QTableWidgetItem[I_ROWNUM * I_COLNUM];
     for(int i=0; i<I_ROWNUM; i++)
     {
         for(int j=0; j<I_COLNUM; j++)
         {
-            itemArray->setTextAlignment(Qt::AlignLeft|Qt::AlignVCenter);
-            this->setItem(i, j, itemArray++);
+            QTableWidgetItem *pitem = new QTableWidgetItem;
+            pitem->setTextAlignment(Qt::AlignLeft|Qt::AlignVCenter);
+            this->setItem(i, j, pitem);
             if(i%2==0)
             {
                 item(i,j)->setBackgroundColor(QColor(235,244,223));
