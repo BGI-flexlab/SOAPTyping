@@ -45,13 +45,13 @@ void BaseAlignTableWidget::InitUI()
     setHorizontalHeaderLabels(m_sl_defaulthead);
 
 
-    QTableWidgetItem *itemArray = new QTableWidgetItem[m_iRowNum * m_iColNum];
+    //QTableWidgetItem *itemArray = new QTableWidgetItem[m_iRowNum * m_iColNum];
     for(int i=0; i<m_iRowNum; i++)
     {
         setRowHeight(i,20);
         for(int j=0; j<m_iColNum; j++)
         {
-
+            QTableWidgetItem *itemArray = new QTableWidgetItem;
             if(j == 0)
             {
                 itemArray->setTextAlignment(Qt::AlignLeft|Qt::AlignVCenter);
@@ -97,7 +97,7 @@ void BaseAlignTableWidget::InitUI()
                 itemArray->setTextColor(QColor(237,30,121));
             }
 
-            itemArray++;
+            //itemArray++;
         }
     }
 
