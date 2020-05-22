@@ -35,7 +35,7 @@
 
 //QT_CHARTS_USE_NAMESPACE
 
-const QString VERSION("1.0.6.0");
+const QString VERSION("1.0.6.3");
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
