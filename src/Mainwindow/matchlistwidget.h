@@ -33,6 +33,7 @@ private slots:
 
     void slotShowGsspZCode();
     void slotSetFinalType();
+    void slotMergeType();
 signals:
     void signalIndelPostion(int pos);
     void signalAllelePair(QString &, QString &);
@@ -47,6 +48,7 @@ private:
     QMenu *m_pRightMenu;
     QAction *m_pActShowGSSPZCode;
     QAction *m_pActSetFinalType;
+    QAction *m_pActMergeType;
     QVector<QStringList> m_vec_gsspInfo;
     QStringList m_strlist_result;
 };

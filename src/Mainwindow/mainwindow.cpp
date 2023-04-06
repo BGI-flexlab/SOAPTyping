@@ -210,38 +210,46 @@ void MainWindow::slotShowOpenDlg()
 
 void MainWindow::SetStatusbar()
 {
-    QString strA("<b><font color='#39B54A' size='5'>A</font></b>");
-    QString strC("<b><font color='#0000ff' size='5'>C</font></b>");
-    QString strG("<b><font color='#000000' size='5'>G</font></b>");
-    QString strT("<b><font color='#ff0000' size='5'>T</font></b>");
+    QString strA("<b><font size='5'>A</font></b>");
+    QString strC("<b><font size='5'>C</font></b>");
+    QString strG("<b><font size='5'>G</font></b>");
+    QString strT("<b><font size='5'>T</font></b>");
 
-    QString strR("<b><font color='#C1272d' size='5'>R-</font></b>");
-    QString strY("<b><font color='#C1272d' size='5'>Y-</font></b>");
-    QString strK("<b><font color='#C1272d' size='5'>K-</font></b>");
-    QString strM("<b><font color='#C1272d' size='5'>M-</font></b>");
-    QString strS("<b><font color='#C1272d' size='5'>S-</font></b>");
-    QString strW("<b><font color='#C1272d' size='5'>W-</font></b>");
-    QString strB("<b><font color='#C1272d' size='5'>B-</font></b>");
-    QString strD("<b><font color='#C1272d' size='5'>D-</font></b>");
-    QString strH("<b><font color='#C1272d' size='5'>H-</font></b>");
-    QString strV("<b><font color='#C1272d' size='5'>V-</font></b>");
-    QString strspace("  ");
+    QString strR("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;R: </font>");
+    QString strY("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;Y: </font>");
+    QString strK("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;K: </font>");
+    QString strM("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;M: </font>");
+    QString strS("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;S: </font>");
+    QString strW("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;W: </font>");
+    QString strB("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;B: </font>");
+    QString strD("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;D: </font>");
+    QString strH("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;H: </font>");
+    QString strV("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;V: </font>");
+    QString strN("<font style='font-size:18px; background-color:#C1272d; color:white;  font-weight:bold ; '>&nbsp;N: </font>");
+        //QString strDel("<b><font color='#C1272d' size='5'>&lt;:</font></b>");
+         //QString strIns("<b><font color='#C1272d' size='5'>>:</font></b>");
+        // QString strDD("<b><font color='#000000' size='5'>Remove</font></b>");
+        // QString strII("<b><font color='#000000' size='5'>Insert</font></b>");
+    QString strspace("<b><font size='5'>&nbsp;&nbsp;</b>");
+    QString strcomma("<b><font color='#C1272d' size='6'>:</b>");
 
-    QString str = strR + strA+ strG + strspace +
-                  strY + strT + strC + strspace +
-                  strK + strG + strT + strspace +
-                  strM + strA + strC + strspace +
-                  strS + strG + strC + strspace +
+    QString str = strM + strA + strC + strspace +
+                  strR + strA + strG + strspace +
                   strW + strA + strT + strspace +
-                  strB + strG + strT + strC + strspace +
-                  strD + strG + strA + strT + strspace +
+                  strS + strC + strG + strspace +
+                  strY + strC + strT + strspace +
+                  strK + strG + strT + strspace + strspace +strspace +strspace+
+                  strV + strA + strC + strG + strspace +
                   strH + strA + strC + strT + strspace +
-                  strV + strG + strC + strA;
+                  strD + strA + strG + strT + strspace +
+                  strB + strC + strG + strT + strspace + strspace +strspace +strspace+
+                  strN + strA + strC + strG + strT;
     ui->statusbarleft->setText(str);
 }
 
 void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
 {
+    //qDebug()<<"here";
     if(item == nullptr)
     {
         return;
@@ -276,6 +284,11 @@ void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
 
     m_pExonNavigatorWidget->SetExonData(str_sample, str_gene);
 
+   // qDebug()<<str_sample;
+   // qDebug()<<strfile;
+   // qDebug()<<str_info;
+   // qDebug()<<col;
+  //  qDebug()<<"=========";
     m_pBaseAlignTableWidget->SetAlignTableData(str_sample,strfile, str_info, col);
 
     int index_exon = str_info.left(1).toInt();
@@ -292,14 +305,17 @@ void MainWindow::slotSampleTreeItemChanged(QTreeWidgetItem *item, int col)
     LOG_DEBUG("%d %d %d %d",index_exon, startpos, selectpos, exonstartpos);
 
     int i_columnPos = selectpos - startpos;
-    int sliderPos = i_columnPos*25-30;
-    m_pBaseAlignTableWidget->selectColumn(i_columnPos);
-    m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
+    int sliderPos = i_columnPos*25-2;
+
 
     int i_sub = selectpos - exonstartpos;
     m_pMultiPeakWidget->SetSelectPos(selectpos,270);
 
     m_pMatchListWidget->SetTableData(str_sample,strfile, str_info, col);
+
+
+    m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
+    m_pBaseAlignTableWidget->selectColumn(i_columnPos);
 }
 
 //导航条起始pos,选中的峰图pos，选中的导航条起始pos,选中的导航条index
@@ -312,7 +328,7 @@ void MainWindow::slotExonFocusPosition(int startpos, int selectpos, int exonstar
     }
     LOG_DEBUG("%d %d %d %d",startpos, selectpos, exonstartpos, index);
     int i_columnPos = selectpos - startpos; //二者之差为表格的第几列
-    int sliderPos = i_columnPos*25-8;
+    int sliderPos = i_columnPos*25+8;
     m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(sliderPos);
     m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
 
@@ -320,6 +336,8 @@ void MainWindow::slotExonFocusPosition(int startpos, int selectpos, int exonstar
     m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
     //m_pSampleTreeWidget->SetSelectItemByName(m_str_SelectSample, m_str_SelectFile);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
+    //qDebug() << selectpos;
+    //qDebug() << 270;
     m_pMultiPeakWidget->SetSelectPos(selectpos,270);
 }
 
@@ -347,7 +365,9 @@ void MainWindow::slotAlignTableFocusPosition(QTableWidgetItem *item)
     //m_pSampleTreeWidget->SetSelectItem(index, m_str_SelectSample);
     m_pSampleTreeWidget->SetSelectItemByName(m_str_SelectSample, m_str_SelectFile);
     m_pMultiPeakWidget->SetPeakData(m_str_SelectSample, index, m_str_SelectFile);
-    m_pMultiPeakWidget->SetSelectPos(selectpos, xx);
+
+    //qDebug() << xx;
+    m_pMultiPeakWidget->SetSelectPos(selectpos, 270);
 }
 
 void MainWindow::slotPeakFocusPosition(int index, int colnum, QPoint &pos)
@@ -355,9 +375,15 @@ void MainWindow::slotPeakFocusPosition(int index, int colnum, QPoint &pos)
     //LOG_DEBUG("%d %d",index, colnum);
     int i_columnPos;
     m_pExonNavigatorWidget->SetSelectFramePos(index, colnum,i_columnPos);
-    m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
-    int table_pos = i_columnPos*25+240-pos.rx();
+
+    //int table_pos = i_columnPos*25+240-pos.rx();
+    int table_pos = i_columnPos*25-2;
+   // qDebug() << i_columnPos;
+    //qDebug() << pos.rx();
+
+   // qDebug() << table_pos;
     m_pBaseAlignTableWidget->horizontalScrollBar()->setSliderPosition(table_pos);
+    m_pBaseAlignTableWidget->selectColumn(i_columnPos+1);
 }
 
 void MainWindow::slotChangePeak(QString &str_file)
@@ -662,6 +688,7 @@ void MainWindow::slotChangeDB(const QString &str_samplename)
     //msg.setWindowFlags(Qt::WindowTitleHint | Qt::CustomizeWindowHint);
     msg.setText("Please wait for editing ...");
     QPushButton *btn = msg.addButton(QMessageBox::Ok);
+    qDebug()<<"slotchangeDB"<<str_samplename;
     btn->setVisible(false);
     msg.doTask(str_samplename);
     msg.exec();
@@ -686,16 +713,17 @@ void MainWindow::slotChangeDBByFile(QVector<QString> &vec_samplename)
 {
     foreach(const QString &str,vec_samplename)
     {
+        //qDebug()<<st";
         AnalysisSampleThreadTask *pTask = new AnalysisSampleThreadTask(str);
         pTask->run();
         delete pTask;
     }
-
+    //qDebug()<<"=======";
     m_pMatchListWidget->SetRefresh(true);
     m_pExonNavigatorWidget->SetRefresh(true);
     m_pBaseAlignTableWidget->SetRefresh(true);
-    m_pMultiPeakWidget->SetRefresh(true);
-    m_pSampleTreeWidget->SetTreeData();
+    m_pMultiPeakWidget->SetRefresh(true);    
+    m_pSampleTreeWidget->SetTreeData();    
 }
 
 void MainWindow::closeEvent(QCloseEvent *e)

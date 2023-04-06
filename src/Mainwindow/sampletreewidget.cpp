@@ -105,6 +105,7 @@ void SampleTreeWidget::CreateRightMenu()
 
 void SampleTreeWidget::SetTreeData()
 {
+  // qDebug()<<"108";
     clear();
     m_map_SampleTreeInfo.clear();
     SoapTypingDB::GetInstance()->getSampleTreeDataFromSampleTable(m_map_SampleTreeInfo);
@@ -180,6 +181,7 @@ void SampleTreeWidget::SetTreeData()
 
 void SampleTreeWidget::SetSelectItem(int index, const QString &str_sample)
 {
+    //qDebug()<<"183";
     for(int i=0;i<topLevelItemCount();i++)
     {
         QString str_name = topLevelItem(i)->text(0);
@@ -201,6 +203,7 @@ void SampleTreeWidget::SetSelectItem(int index, const QString &str_sample)
 
 void SampleTreeWidget::RefreshSelectSample(const QString &str_sample)
 {
+    //qDebug()<<"206";
     for(int i=0;i<topLevelItemCount();i++)
     {
         QString str_name = topLevelItem(i)->text(0);
@@ -263,6 +266,7 @@ void SampleTreeWidget::RefreshSelectSample(const QString &str_sample)
 
 void SampleTreeWidget::SetSelectItemByName(const QString &str_sample, const QString &str_file)
 {
+    //qDebug()<<"269";
     for(int i=0;i<topLevelItemCount();i++)
     {
         QString str_name = topLevelItem(i)->text(0);
@@ -284,6 +288,7 @@ void SampleTreeWidget::SetSelectItemByName(const QString &str_sample, const QStr
 
 void SampleTreeWidget::markSampleType(int markType)
 {
+   //qDebug()<<"291";
     QTreeWidgetItem *item = m_pSelByRightItem;
     QString str_sample = item->text(0).split('_').at(0);
     int mark,analysis;
@@ -306,6 +311,7 @@ void SampleTreeWidget::markSampleType(int markType)
 
 void SampleTreeWidget::markSampleTypeAndClear(int markType)
 {
+    //qDebug()<<"314";
     QTreeWidgetItem *item = m_pSelByRightItem;
     QString str_sample = item->text(0).split('_').at(0);
     int mark,analysis;
@@ -324,6 +330,7 @@ void SampleTreeWidget::markSampleTypeAndClear(int markType)
 
 void SampleTreeWidget::contextMenuEvent(QContextMenuEvent *event)
 {
+    qDebug()<<"333";
     m_pSelByRightItem = this->itemAt(event->pos());
     if(m_pSelByRightItem != nullptr)
     {

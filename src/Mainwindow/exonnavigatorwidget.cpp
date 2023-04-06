@@ -265,6 +265,7 @@ int ExonNavigatorWidget::PeakPosToScreenPos(int peakpos) //峰图坐标转换成
     {
         if(peakpos >= exon.i_exonstartpos && peakpos <= exon.i_exonendpos)
         {
+            //qDebug()<<peakpos;
             screenpos = (peakpos - m_iStartPeakpos)*m_dXscale
                     + m_igap + (exon.i_exonindex-m_Exoninfo.minExonIndex)*m_iMidgap;
             break;

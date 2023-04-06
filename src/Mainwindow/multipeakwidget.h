@@ -32,6 +32,8 @@ public:
     QString& GetFileName();
 
     void SetAlignPos(int start, int end);
+    void GetAlignPos(int start, int end);
+    void GetExonPos(int &start, int &end);
     void SetExcludePos(int left, int right);
     void GetExcludePos(int &left, int &right);
 
@@ -125,6 +127,9 @@ public slots:
     void slotAnalyseLater();
     void slotAnalyseNow();
     void slotActanalyze();
+    void slotInsertBaseN();
+    void slotMeargeBase();
+    void slotRemoveBase();
 private slots:
     void slotDelteThisFile();
     void slotActApplyOne();
@@ -134,6 +139,10 @@ private slots:
     void slotHighLightLeftPart();
     void slotHighLightRightPart();
     void slotResetExclude();
+    void slotActInsertBaseN();
+    void slotActMeargeBase();
+    void slotActRemoveBase();
+    int searchCap(int m_index_Select);
 
 signals:
     //index:当前导航条index colnum：选中的位置和left_exclude的差值
@@ -169,7 +178,8 @@ private:
     QMenu *m_pRightMenu;
     QAction *m_pActDelete;
     QAction *m_pActInsertBaseN;
-    QAction *m_pActHideTraceDisplay;
+    QAction *m_pActRemoveBase;
+    QAction *m_pActMeargeBase;
     QAction *m_pActApplyOne;
     QAction *m_pActApplyAll;
     QAction *m_pActanalyzeLater;

@@ -976,7 +976,9 @@ void SoapTypingDB::getBaseAlignSampleInfo(const QString &sampleName, BaseAlignSa
                   "patternSequence,mismatchBetweenPC,mismatchBetweenFR,editPostion "
                   "FROM sampleTable WHERE sampleName=?");
     query.bindValue(0, sampleName);
+
     bool isSuccess = query.exec();
+
     if(isSuccess)
     {
         while(query.next())
@@ -985,7 +987,10 @@ void SoapTypingDB::getBaseAlignSampleInfo(const QString &sampleName, BaseAlignSa
             baseAlignSampleInfo.alignEndPos = query.value(1).toInt();
             baseAlignSampleInfo.consensusSeq = query.value(2).toString();
             baseAlignSampleInfo.forwardSeq = query.value(3).toString();
+           // qDebug()<<baseAlignSampleInfo.forwardSeq;
             baseAlignSampleInfo.reverseSeq = query.value(4).toString();
+           // qDebug()<<baseAlignSampleInfo.reverseSeq;
+           // qDebug()<<"====";
             baseAlignSampleInfo.patternSeq = query.value(5).toString();
 
             QStringList pcMis = query.value(6).toString().split(":", QString::SkipEmptyParts);
@@ -1790,6 +1795,53 @@ void SoapTypingDB::getAlleleSequenceByAlleleName(const QString &alleleName, QStr
 
 }
 
+
+bool SoapTypingDB::upDateAlignInfo(const QString &filename, const QString &straligninfo,bool isgssp)
+{
+   // table.setAlignInfo(query_gssp.value(26).toString());
+
+    QSqlQuery query(m_SqlDB);
+    if(isgssp)
+    {
+        query.prepare("UPDATE gsspFileTable SET alignInfo=? WHERE fileName=?");
+    }
+    else
+    {
+        query.prepare("UPDATE fileTable SET alignInfo=? WHERE fileName=?");
+    }
+    query.bindValue(0, straligninfo);
+    query.bindValue(1, filename);
+    if(!query.exec())
+    {
+        return false;
+    }
+    return true;
+}
+
+bool SoapTypingDB::upDateUsefulSeq(const QString &filename, const QString &usefulseq,bool isgssp)
+{
+   // table.setAlignInfo(query_gssp.value(26).toString());
+
+    QSqlQuery query(m_SqlDB);
+    if(isgssp)
+    {
+        query.prepare("UPDATE gsspFileTable SET usefulSequence=? WHERE fileName=?");
+    }
+    else
+    {
+        query.prepare("UPDATE fileTable SET usefulSequence=? WHERE fileName=?");
+    }
+    query.bindValue(0, usefulseq);
+    query.bindValue(1, filename);
+    if(!query.exec())
+    {
+        return false;
+    }
+    return true;
+}
+
+
+
 bool SoapTypingDB::upDatabyChangebp(const QString &filename, const QString &streditinfo,bool isgssp)
 {
     QSqlQuery query(m_SqlDB);
@@ -1863,6 +1915,65 @@ bool SoapTypingDB::upDataExclude(bool isgssp, const QString &filename, int exclu
     }
     return true;
 }
+
+
+bool SoapTypingDB::upDataAlignPos(bool isgssp, const QString &filename, int start, int end)
+{
+    QSqlQuery query(m_SqlDB);
+    if(isgssp)
+    {
+        if(start == -1)
+        {
+            query.prepare("UPDATE gsspFileTable SET alignEndPos=?  WHERE fileName=?");
+            query.bindValue(0, end);
+            query.bindValue(1, filename);
+        }
+        else if(end == -1)
+        {
+            query.prepare("UPDATE gsspFileTable SET alignStartPos=? WHERE fileName=?");
+            query.bindValue(0, start);
+            query.bindValue(1, filename);
+        }
+        else
+        {
+            query.prepare("UPDATE gsspFileTable SET alignStartPos=?,alignEndPos=?  WHERE fileName=?");
+            query.bindValue(0, start);
+            query.bindValue(1, end);
+        }
+    }
+    else
+    {
+        if(start == -1)
+        {
+            query.prepare("UPDATE fileTable SET alignEndPos=?  WHERE fileName=?");
+            query.bindValue(0, start);
+            query.bindValue(1, filename);
+        }
+        else if(end == -1)
+        {
+            query.prepare("UPDATE fileTable SET alignStartPos=? WHERE fileName=?");
+            query.bindValue(0, start);
+            query.bindValue(1, filename);
+        }
+        else
+        {
+            query.prepare("UPDATE fileTable SET alignStartPos=?,alignEndPos=?  WHERE fileName=?");
+            query.bindValue(0, start);
+            query.bindValue(1, end);
+            query.bindValue(2, filename);
+        }
+    }
+
+    if(!query.exec())
+    {
+        return false;
+    }
+    return true;
+}
+
+
+
+
 
 bool SoapTypingDB::deleteTable(const QString &tableName)
 {

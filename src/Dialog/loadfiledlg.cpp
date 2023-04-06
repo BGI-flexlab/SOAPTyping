@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QDateTime>
 #include <QTextStream>
+#include <QDebug>
 #include "Core/fileTablebase.h"
 #include "DataBase/soaptypingdb.h"
 #include "Core/core.h"
@@ -84,8 +85,9 @@ void LoadFileDlg::slotClickLoadButton()
     }
 
     int fileSize = samplePaths.size()+filePaths.size()+gsspFilePaths.size();
-    int value=0;
 
+    int value=0;
+    qDebug()<<fileSize;
     ui->btnStatus->setText("Waiting..");
     ui->progressBar->setRange(0, fileSize);
     for(int i=0; i<samplePaths.size();i++)
@@ -248,6 +250,7 @@ void LoadFileDlg::readListFile(const QString &listFilePath, QVector<QString> &sa
         if(line.at(0)=="sampleTable")
         {
             samplePaths.push_back(line.at(1));
+            qDebug()<<line.at(1);
         }
         else if(line.at(0)=="fileTable")
         {
@@ -268,9 +271,10 @@ void LoadFileDlg::loadSample(const QString &samplePath)
     QFile file(samplePath);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
+        qDebug()<<"return";
         return;
     }
-
+    qDebug()<<"loading";
     QTextStream stream(&file);
 
     sampletable.setSampleName(stream.readLine());
@@ -299,6 +303,7 @@ void LoadFileDlg::loadSample(const QString &samplePath)
     sampletable.setCombinedResult(stream.readLine());
 
     SoapTypingDB::GetInstance()->insertOneSampleTable(sampletable);
+    qDebug()<<"loaded";
     return;
 }
 
