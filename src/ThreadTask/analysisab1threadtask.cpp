@@ -193,13 +193,11 @@ void AnalysisAB1ThreadTask::run()
 
     QStringList alignInfo_t;
     int i_ret = m_pFiletable->getAlignResult();
-    //qDebug()<<i_basenum;
-   // qDebug()<<"i_basenum";
     if(i_ret >0)
     {
         m_pFiletable->setAlignStartPos(i_basenum-1);
         m_pFiletable->setAlignEndPos(i_basenum-1);
-        qDebug()<<i_basenum;
+        
         for (int i = 0; i < i_basenum; i++)
         {
             alignInfo_t << QString::number(-1);

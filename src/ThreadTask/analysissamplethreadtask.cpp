@@ -135,7 +135,6 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
                 mis++;
             }
         }
-       // qDebug()<<alleleInfos.at(i).alleleName<<" mis = "<<mis;
         if(alleleInfos.at(i).starInfo.contains("*")){
             starCount++;
             tmpStarPos.insertMulti(mis, i);
@@ -146,7 +145,7 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
     }
 
     QSet<int> tmpset;//缓存留下的allele
-    //取最好的前200个不带有*的序列,最多不超过400，废掉了
+    //取最好的前200个不带有*的序列,最多不超过500，废掉了
     //取前20%最好的，最多不超多50%
     //cut_best and cut_limit
     int cut_best = normalCount*0.2;
@@ -169,7 +168,7 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
         tmpset.insert(it.value());
     }
     tmpCount =0;tmpMis =0;
-    //取最好的前200个带有*的序列,最多不超过400,废掉了
+    //取最好的前200个带有*的序列,最多不超过500,废掉了
     //取前20%最好的，最多不超多50%
     cut_best = starCount*0.2;
     if (cut_best<200){

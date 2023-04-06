@@ -308,7 +308,6 @@ void MatchListWidget::slotClickIndelItem(QTableWidgetItem* itemNow)
 
 void MatchListWidget::slotRowChanged(QTableWidgetItem* itemNow)
 {
-    qDebug()<<itemNow;
     if(itemNow==0) {
         return;
     }
@@ -340,7 +339,6 @@ void MatchListWidget::slotShowGsspZCode()
     gssp.exec();
 }
 
-
 void MatchListWidget::slotSetFinalType()
 {
     QVector<QStringList> result;
@@ -364,8 +362,6 @@ void MatchListWidget::slotMergeType()
 {
 
 }
-
-
 
 void findUsefulGssp_new(const char *seq11, const char *seq12, const char *seq21, const char *seq22,
                     int exonStart, int exonEnd, QVector<GsspTable> &gsspTables,

@@ -976,9 +976,7 @@ void SoapTypingDB::getBaseAlignSampleInfo(const QString &sampleName, BaseAlignSa
                   "patternSequence,mismatchBetweenPC,mismatchBetweenFR,editPostion "
                   "FROM sampleTable WHERE sampleName=?");
     query.bindValue(0, sampleName);
-
     bool isSuccess = query.exec();
-
     if(isSuccess)
     {
         while(query.next())
@@ -987,10 +985,7 @@ void SoapTypingDB::getBaseAlignSampleInfo(const QString &sampleName, BaseAlignSa
             baseAlignSampleInfo.alignEndPos = query.value(1).toInt();
             baseAlignSampleInfo.consensusSeq = query.value(2).toString();
             baseAlignSampleInfo.forwardSeq = query.value(3).toString();
-           // qDebug()<<baseAlignSampleInfo.forwardSeq;
             baseAlignSampleInfo.reverseSeq = query.value(4).toString();
-           // qDebug()<<baseAlignSampleInfo.reverseSeq;
-           // qDebug()<<"====";
             baseAlignSampleInfo.patternSeq = query.value(5).toString();
 
             QStringList pcMis = query.value(6).toString().split(":", QString::SkipEmptyParts);
@@ -1795,7 +1790,7 @@ void SoapTypingDB::getAlleleSequenceByAlleleName(const QString &alleleName, QStr
 
 }
 
-
+//SC: for base delete, merge and insert
 bool SoapTypingDB::upDateAlignInfo(const QString &filename, const QString &straligninfo,bool isgssp)
 {
    // table.setAlignInfo(query_gssp.value(26).toString());

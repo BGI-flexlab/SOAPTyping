@@ -114,20 +114,13 @@ void Core::GetFileAlignResult(FileAlignNew &file_align_new, FileAlignResult &res
                 if(tmp_result.sample_alignment[i]=='-')
                 {
                     result.sampleAlign[index]='-';
-                   // qDebug()<<pos;
                 }
                 else
                 {
                     result.sampleAlign[index]= tmp_result.sample_alignment[i];
                     if(pos<seq_len)
                     {
-                       // qDebug()<<pos;
-                      //  qDebug()<<index+file_align_new.consensus_start ;
-                        //qDebug()<<file_align_new.consensus_start;
-                      //  qDebug()<<"====";
                         result.baseMatchConsensusPos[pos++] = index+file_align_new.consensus_start;
-
-
                     }
                 }
                 index++;
@@ -136,7 +129,7 @@ void Core::GetFileAlignResult(FileAlignNew &file_align_new, FileAlignResult &res
             {
                 pos++;
                 cmp_len++;
-                //result.rightLimit--;
+                //result.rightLimit--; //SC: keep rightLimit, avoid shrink aligment 
             }
         }
         result.sampleAlign[ref_len] ='\0';
@@ -281,23 +274,21 @@ bool Core::isEqualPC(char A, char B)
 void Core::Align_LCS_new(const char *ref, const char *seq, FileAlignResultNew *result)
 {
     int m = strlen(ref);
-    qDebug() << m;
     int n = strlen(seq);
+    //SC: limit sanger seq length 
     if (n>1100){
         n = 1100;
     }
     int maxscore = 0, x = 0, y = 0;
     std::vector<std::vector<int>> vec_matrix(m, std::vector<int>(n+1, 0));
-    //空矩阵设为mx(n+1)，保证最右一个列全是0
+    //SC: set empty matrix to mx(n+1), to keep the most right column be '0''. 空矩阵设为mx(n+1)，保证最右一个列全是0
     std::vector<char> ref_back;
     std::vector<char> seq_back;
 
     for (int i = 0; i < m ; i++)
     {
-
         for (int j = 0; j < n ; j++)
         {
-
             if (equal(ref[i], seq[j]))
             {
                 if (i == 0 || j == 0)
@@ -322,21 +313,11 @@ void Core::Align_LCS_new(const char *ref, const char *seq, FileAlignResultNew *r
     int ref_stop = x+1;
     int seq_stop = y+1;
 
- /*   for (int x = 0; x<m;x++){
-
-        for (int y = 0; y <n; y++){
-            qDebug()<<vec_matrix[x][y];
-        }
-        qDebug()<<"============";
-    }
-    */
-    qDebug()<<maxscore;
-
     ref_back.clear();
     seq_back.clear();
     while (maxscore>0)
     {
-        //小于10的片段不考虑
+        //SC: ignore alignment smaller than 10. 小于10的片段不考虑
         if (vec_matrix[x][y]<(vec_matrix[x][y+1]-10)){
             ref_back.push_back(ref[x--]);
             seq_back.push_back('-');
@@ -348,7 +329,9 @@ void Core::Align_LCS_new(const char *ref, const char *seq, FileAlignResultNew *r
             seq_back.push_back(seq[y--]);
             maxscore--;
         }
-        //qDebug()<<maxscore;
+//        ref_back.push_back(ref[x--]);
+//        seq_back.push_back(seq[y--]);
+//        maxscore--;
     }
 
 //    while (x >= 0 && y >= 0)
