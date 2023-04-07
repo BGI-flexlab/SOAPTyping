@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QDateTime>
 #include <QTextStream>
+#include <QDebug>
 #include "Core/fileTablebase.h"
 #include "DataBase/soaptypingdb.h"
 #include "Core/core.h"
@@ -85,7 +86,6 @@ void LoadFileDlg::slotClickLoadButton()
 
     int fileSize = samplePaths.size()+filePaths.size()+gsspFilePaths.size();
     int value=0;
-
     ui->btnStatus->setText("Waiting..");
     ui->progressBar->setRange(0, fileSize);
     for(int i=0; i<samplePaths.size();i++)
@@ -270,7 +270,6 @@ void LoadFileDlg::loadSample(const QString &samplePath)
     {
         return;
     }
-
     QTextStream stream(&file);
 
     sampletable.setSampleName(stream.readLine());

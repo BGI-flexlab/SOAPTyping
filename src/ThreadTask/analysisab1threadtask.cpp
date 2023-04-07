@@ -197,7 +197,7 @@ void AnalysisAB1ThreadTask::run()
     {
         m_pFiletable->setAlignStartPos(i_basenum-1);
         m_pFiletable->setAlignEndPos(i_basenum-1);
-
+        
         for (int i = 0; i < i_basenum; i++)
         {
             alignInfo_t << QString::number(-1);

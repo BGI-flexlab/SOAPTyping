@@ -11,6 +11,7 @@
 #include "log/log.h"
 #include <QFontDatabase>
 #include <QToolTip>
+#include "Core/core.h"
 
 const int PEAKLINEHIGHT = 160;
 const int HLINEHIGHT = 20;
@@ -101,6 +102,12 @@ void PeakLine::SetAlignPos(int start, int end)
 {
     m_iAlignStart = start;
     m_iAlignEnd = end;
+}
+
+void PeakLine::GetAlignPos(int start, int end)
+{
+    start = m_iAlignStart ;
+    end = m_iAlignEnd;
 }
 
 void PeakLine::SetExcludePos(int left, int right)
@@ -212,6 +219,8 @@ MultiPeakWidget::MultiPeakWidget(QWidget *parent)
     m_index_PeakLine = 0;
     m_bApplyOne = false;
     m_bEditOne = true;
+    m_start_exon = 0;
+    m_end_exon = 0;
     setFocusPolicy(Qt::StrongFocus);//如果不调用，keyPressEvent不响应
     CreateRightMenu();
     ConnectSignalandSlot();
@@ -266,6 +275,11 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index, cons
     }
     else
     {
+        if(m_str_SampleName != str_samplename || m_index_Exon != index)
+        {
+            m_str_SampleName = str_samplename;
+            m_index_Exon = index;
+        }
         m_bRefresh = false;
     }
 
@@ -298,12 +312,12 @@ void MultiPeakWidget::SetPeakData(const QString &str_samplename, int index, cons
         pPeakLine->setPeakYSetp(PEAK_Y_STEP);
         pPeakLine->setPeakHeight(PEAKLINEHIGHT);
 
-//        if(len_exon == 0)
-//        {
-//            m_start_exon = table.getExonStartPos();
-//            m_end_exon = table.getExonEndPos();
-//            len_exon = m_end_exon - m_start_exon;
-//        }
+      //  if(len_exon == 0)
+      //  {
+        m_start_exon = table.getExonStartPos();
+        m_end_exon = table.getExonEndPos();
+    //        len_exon = m_end_exon - m_start_exon;
+     //   }
 
         m_vec_Peakline.push_back(pPeakLine);
     }
@@ -586,7 +600,8 @@ void MultiPeakWidget::GetBaseColor(QPainter *pter, const QChar &base)
         pter->setPen(Qt::blue);
         break;
     default:
-        pter->setPen(Qt::darkRed);
+        pter->setPen(Qt::yellow);
+
     }
 }
 
@@ -610,6 +625,14 @@ void MultiPeakWidget::DrawPeakHead(QPainter *pter)
         {
             pter->setFont(font_letter);
             GetBaseColor(pter, letter.type);
+            if(QString(letter.type) != "A" && QString(letter.type) != "T" && QString(letter.type) != "G"&& QString(letter.type) != "C"){
+                pter->fillRect(letter.pos.x()-2,letter.pos.y()+2,19,-17,QBrush(QColor(Qt::darkRed)));
+          //      font_letter.setPointSize(16);
+            }
+
+            //else{
+           //     font_letter.setPointSize(13);
+          //  }
             pter->drawText(letter.pos, QString(letter.type));
             if(letter.oldtype != ' ')
             {
@@ -744,7 +767,6 @@ void MultiPeakWidget::mousePressEvent(QMouseEvent *event)
                 m_x_index =  aligninfo[m_index_Select].toInt()+1;
                 if(m_x_index == 0)
                 {
-                    qDebug()<<"mismatch del";
                     return;
                 }
 
@@ -800,7 +822,6 @@ void MultiPeakWidget::keyPressEvent(QKeyEvent *event)
     {
         m_bIsSelect = false;
         char type = event->key();
-        qDebug()<<"keyPressEvent"<<type;
 
         QByteArray byetary("ATGCRYKMSWBDHVN-");
         QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
@@ -878,11 +899,12 @@ void MultiPeakWidget::SetSelectPos(int exon_pos,int x_pos)
 void MultiPeakWidget::CreateRightMenu()
 {
     m_pActDelete = new QAction(tr("Delete Selected File"),this);
-    m_pActInsertBaseN = new QAction(tr("Insert Base 'N'"),this);
-    m_pActHideTraceDisplay = new QAction(tr("Hide Trace Display"),this);
+    m_pActMeargeBase = new QAction(tr("Mearge Next Base"),this);
+    m_pActRemoveBase = new QAction(tr("Remove Base"),this);
+    m_pActInsertBaseN = new QAction(tr("Insert Base N"),this);
 
-    m_pActInsertBaseN->setDisabled(true);
-    m_pActHideTraceDisplay->setDisabled(true);
+    m_pActMeargeBase->setDisabled(false);
+    m_pActRemoveBase->setDisabled(false);
 
     m_pActApplyOne = new QAction(QIcon(":/png/images/apply.png"),tr("Apply One"),this);
     m_pActApplyOne->setIconVisibleInMenu(false);
@@ -910,8 +932,9 @@ void MultiPeakWidget::CreateRightMenu()
 
     m_pRightMenu = new QMenu(this);
     m_pRightMenu->addAction(m_pActDelete);
+    m_pRightMenu->addAction(m_pActMeargeBase);
+    m_pRightMenu->addAction(m_pActRemoveBase);
     m_pRightMenu->addAction(m_pActInsertBaseN);
-    m_pRightMenu->addAction(m_pActHideTraceDisplay);
     m_pRightMenu->addSeparator();
 
     m_pRightMenu->addAction(m_pActApplyOne);
@@ -947,6 +970,9 @@ void MultiPeakWidget::ConnectSignalandSlot()
     connect(m_pActExcludeLeft, &QAction::triggered, this, &MultiPeakWidget::slotHighLightLeftPart);
     connect(m_pActExcludeRight, &QAction::triggered, this, &MultiPeakWidget::slotHighLightRightPart);
     connect(m_pActResetExclude, &QAction::triggered, this, &MultiPeakWidget::slotResetExclude);
+    connect(m_pActMeargeBase, &QAction::triggered, this, &MultiPeakWidget::slotActMeargeBase);
+    connect(m_pActRemoveBase, &QAction::triggered, this, &MultiPeakWidget::slotActRemoveBase);
+    connect(m_pActInsertBaseN, &QAction::triggered, this, &MultiPeakWidget::slotActInsertBaseN);
 }
 
 void MultiPeakWidget::slotDelteThisFile()
@@ -960,6 +986,531 @@ void MultiPeakWidget::slotDelteThisFile()
     vec_samplename.push_back(m_str_SampleName);
     emit signalChangeDBByFile(vec_samplename);
 }
+
+
+//Try to add single base N to sequence
+
+void MultiPeakWidget::slotInsertBaseN()
+{
+    if(true)
+    {
+        m_bIsSelect = false;
+        char type = 'N';
+
+        QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
+        if(true)
+        {
+            vec_GeneLetter[m_index_Select].oldtype = vec_GeneLetter[m_index_Select].type;
+            vec_GeneLetter[m_index_Select].type = type;
+
+            int left_exclude,right_exclude;
+            m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
+            char temp;
+
+            for(int i=m_index_Select+1;i<right_exclude-1;i++)
+            {
+
+                temp = vec_GeneLetter[i].oldtype;
+                vec_GeneLetter[i].oldtype = vec_GeneLetter[i].type;
+                vec_GeneLetter[i].type = vec_GeneLetter[i-1].oldtype;
+                if (vec_GeneLetter[i].type == temp)
+                {
+                    vec_GeneLetter[i-1].oldtype = ' ';
+                }
+
+            }
+            vec_GeneLetter[m_index_Select].oldtype = '>';
+
+            update();
+
+            if(m_bEditOne)
+            {
+                QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+
+                QStringList list_editinfo;//每个string包含三个部分：碱基序列实际位置 映射到比对位置的pos 修改后的碱基
+                for(int i=left_exclude;i<right_exclude;i++)
+                {
+                    if(vec_GeneLetter[i].oldtype != ' ')
+                    {
+                        int selectpos = aligninfo[i].toInt();
+                        list_editinfo.push_back(QString("%1:%2:%3").arg(i).arg(selectpos).arg(vec_GeneLetter[i].type));
+                    }
+                }
+
+                if(!list_editinfo.empty())
+                {
+                    SoapTypingDB::GetInstance()->upDatabyChangebp(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                              list_editinfo.join(';'),
+                                                              m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                    emit signalChangeDB(m_str_SampleName);//数据库发生变化，需要重新分析样品，重新显示信息
+                    QPoint pos_peak = mapToParent(m_select_pos);
+                    emit signalPeakFocusPosition(m_index_Exon, m_x_index, pos_peak);
+                }
+            }
+        }
+
+    }
+}
+
+
+void MultiPeakWidget::slotActInsertBaseN()
+{
+    slotInsertBaseN();
+}
+
+//find potential deletion or return the right exclusive position
+
+int MultiPeakWidget::searchCap(int m_index_Select)
+{
+    QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+
+
+    int left_exclude,right_exclude, m_x_index;
+    m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
+
+    for(int i=m_index_Select;i<right_exclude;i++)
+    {
+        m_x_index =  aligninfo[i].toInt()+1;
+        if(m_x_index == 0)
+        {
+            return i;
+        }
+    }
+    return  right_exclude-1;
+
+}
+
+//Try to remove current selected base from sequence
+void MultiPeakWidget::slotRemoveBase()
+{
+    if(true)
+    {
+        m_bIsSelect = false;
+        //char type = 'N';
+
+        QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
+        if(true)
+        {
+            int left_exclude,right_exclude;
+            m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
+
+            //char temp;
+
+            //find cap, get the index for cap +1, if no cap detected, set capend as right_exclusive
+            int capend = searchCap(m_index_Select)+1;
+
+            //remove cap
+
+
+            if (capend != right_exclude){
+
+             for (int i = m_index_Select; i<capend; i++){
+                    vec_GeneLetter[i].oldtype = vec_GeneLetter[i].type;
+                }
+                //vec_GeneLetter[m_index_Select].oldtype = vec_GeneLetter[m_index_Select].type;
+                vec_GeneLetter[m_index_Select].type ='-';
+
+
+
+
+                QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+                QStringList align_editinfo;
+
+                for(int i = 0; i < m_index_Select; i++){
+                    align_editinfo.push_back(aligninfo[i].toString());
+                }
+                align_editinfo.push_back("-1");
+                for(int i=m_index_Select;i<capend-1;i++)
+                {
+                    align_editinfo.push_back(aligninfo[i].toString());
+                }
+                for(int i=capend;i<aligninfo.length();i++)
+                {
+                    align_editinfo.push_back(aligninfo[i].toString());
+                }
+                SoapTypingDB::GetInstance()->upDateAlignInfo(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                              align_editinfo.join(':'),
+                                                              m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                m_vec_filetable[m_index_PeakLine].setAlignInfo(align_editinfo.join(':'));
+
+
+
+                //move useful sequence
+
+                QString seqinfo = m_vec_filetable[m_index_PeakLine].getUsefulSequence();
+                QString seq_editinfo;
+
+                for(int i = left_exclude; i < m_index_Select; i++)
+                {
+                    seq_editinfo += vec_GeneLetter[i].type;
+                }
+
+                for(int i = m_index_Select+1; i < right_exclude; i++)
+                {
+                    seq_editinfo += vec_GeneLetter[i].type;
+                }
+
+
+                SoapTypingDB::GetInstance()->upDateUsefulSeq(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                              seq_editinfo,
+                                                              m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                m_vec_filetable[m_index_PeakLine].setUsefulSequence(seq_editinfo);
+
+            }
+
+
+            QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+            update();
+
+           // emit signalChangeDB(m_str_SampleName);//数据库发生变化，需要重新分析样品，重新显示信息
+         //   QPoint pos_peak = mapToParent(m_select_pos);
+         //   emit signalPeakFocusPosition(m_index_Exon, m_x_index, pos_peak);
+
+            if(m_bEditOne)
+                {
+                    QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+                    QStringList list_editinfo;//每个string包含三个部分：碱基序列实际位置 映射到比对位置的pos 修改后的碱基
+                    for(int i=left_exclude;i<right_exclude;i++)
+                    {
+                        if(vec_GeneLetter[i].oldtype != ' ')
+                        {
+                            int selectpos = aligninfo[i].toInt();
+                            list_editinfo.push_back(QString("%1:%2:%3").arg(i).arg(selectpos).arg(vec_GeneLetter[i].type));
+                        }
+                    }
+
+
+                    if(!list_editinfo.empty())
+                    {
+                        SoapTypingDB::GetInstance()->upDatabyChangebp(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                  list_editinfo.join(';'),
+                                                                  m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                        emit signalChangeDB(m_str_SampleName);//数据库发生变化，需要重新分析样品，重新显示信息
+                        QPoint pos_peak = mapToParent(m_select_pos);
+                        emit signalPeakFocusPosition(m_index_Exon, m_x_index, pos_peak);
+                    }
+                }
+
+        }
+
+    }
+
+
+
+
+}
+
+
+void MultiPeakWidget::slotActRemoveBase()
+{
+    slotRemoveBase();
+   // emit signalChangeDBByFile(vec_samplename);
+}
+
+
+
+
+//mearge next base
+void MultiPeakWidget::slotMeargeBase()
+{
+    if(true)
+    {
+        m_bIsSelect = false;
+        //char type = 'N';
+
+        QVector<GeneLetter> &vec_GeneLetter = m_vec_Peakline[m_index_PeakLine]->GetGeneLetter();
+        if(true)
+        {
+            int left_exclude,right_exclude;
+            m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
+
+            //char temp;
+
+            //find cap, get the index for cap +1, if no cap detected, set capend as right_exclusive
+            int capend = searchCap(m_index_Select)+1;
+
+            //remove cap
+
+            if (capend != right_exclude){
+
+
+                for (int i = m_index_Select; i<capend; i++){
+                    vec_GeneLetter[i].oldtype = vec_GeneLetter[i].type;
+                }
+                //vec_GeneLetter[m_index_Select].oldtype = vec_GeneLetter[m_index_Select].type;
+
+
+
+
+                vec_GeneLetter[m_index_Select+1].type = Core::GetInstance()->mergeBases(vec_GeneLetter[m_index_Select].type,vec_GeneLetter[m_index_Select+1].type);
+                vec_GeneLetter[m_index_Select].type ='-';
+
+                QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+                QStringList align_editinfo;
+
+                for(int i = 0; i < m_index_Select; i++){
+                    align_editinfo.push_back(aligninfo[i].toString());
+                }
+                align_editinfo.push_back("-1");
+                for(int i=m_index_Select;i<capend-1;i++)
+                {
+                    align_editinfo.push_back(aligninfo[i].toString());
+                }
+                for(int i=capend;i<aligninfo.length();i++)
+                {
+                    align_editinfo.push_back(aligninfo[i].toString());
+                }
+                SoapTypingDB::GetInstance()->upDateAlignInfo(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                              align_editinfo.join(':'),
+                                                              m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                m_vec_filetable[m_index_PeakLine].setAlignInfo(align_editinfo.join(':'));
+
+
+
+                //move useful sequence
+
+                QString seqinfo = m_vec_filetable[m_index_PeakLine].getUsefulSequence();
+                QString seq_editinfo;
+
+                int start=m_vec_filetable[m_index_PeakLine].getAlignStartPos();
+                int end=m_vec_filetable[m_index_PeakLine].getAlignEndPos();
+                QString fullseqinfo = m_vec_filetable[m_index_PeakLine].getBaseSequence();
+                for (int i = align_editinfo[start].toInt(); i>m_start_exon;i--){
+                    seq_editinfo += "-";
+                }
+                for (int i = start; i<left_exclude;i++){
+                    seq_editinfo += fullseqinfo[i];
+                }
+                for(int i = left_exclude; i < m_index_Select; i++)
+                {
+                    seq_editinfo += vec_GeneLetter[i].type;
+                }
+
+                for(int i = m_index_Select+1; i < end; i++)
+                {
+                    seq_editinfo += vec_GeneLetter[i].type;
+                }
+
+
+                SoapTypingDB::GetInstance()->upDateUsefulSeq(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                              seq_editinfo,
+                                                              m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                m_vec_filetable[m_index_PeakLine].setUsefulSequence(seq_editinfo);
+
+
+
+            }
+            else {
+                int start=m_vec_filetable[m_index_PeakLine].getAlignStartPos();
+                int end=m_vec_filetable[m_index_PeakLine].getAlignEndPos();
+                if (m_index_Select<(start+end)/2){
+                    for (int i = m_index_Select; i>left_exclude; i--){
+                        vec_GeneLetter[i].oldtype = vec_GeneLetter[i].type;
+                    }
+                    vec_GeneLetter[m_index_Select+1].type = Core::GetInstance()->mergeBases(vec_GeneLetter[m_index_Select].type,vec_GeneLetter[m_index_Select+1].type);
+                    vec_GeneLetter[m_index_Select].type ='-';
+
+                    QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+                    QStringList align_editinfo;
+
+
+                    for(int i = 0; i < m_index_Select; i++){
+                        align_editinfo.push_back(aligninfo[i].toString());
+                    }
+                    int j=aligninfo[m_index_Select].toInt();
+                    for (int i = m_index_Select-1; i>=0 && j>m_start_exon; i--, j--){
+                        align_editinfo[i] = QString::number(j);
+                    }
+                    int news_start = 0;
+                    while (align_editinfo[news_start].toInt()<0) news_start++;
+                    align_editinfo.push_back("-1");
+                    for(int i=m_index_Select+1;i<capend-1;i++)
+                    {
+                        align_editinfo.push_back(aligninfo[i].toString());
+                    }
+                    for(int i=capend;i<aligninfo.length();i++)
+                    {
+                        align_editinfo.push_back(aligninfo[i].toString());
+                    }
+                    SoapTypingDB::GetInstance()->upDateAlignInfo(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                  align_editinfo.join(':'),
+                                                                  m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                    m_vec_filetable[m_index_PeakLine].setAlignInfo(align_editinfo.join(':'));
+
+                    if (news_start<start){
+                        SoapTypingDB::GetInstance()->upDataAlignPos( m_vec_Peakline[m_index_PeakLine]->GetGssp(),
+                                                                    m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                    news_start,
+                                                                    end);
+
+                        m_vec_filetable[m_index_PeakLine].setAlignStartPos(news_start);
+                        m_vec_Peakline[m_index_PeakLine]->SetAlignPos(news_start,end);
+                        m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
+                        //int selectpos = left_exclude-m_vec_filetable[m_index_PeakLine].getAlignStartPos();
+                        //m_vec_Peakline[m_index_PeakLine]->SetExcludePos(-selectpos, -1);
+                        SoapTypingDB::GetInstance()->upDataExclude(m_vec_Peakline[m_index_PeakLine]->GetGssp(),
+                                                                   m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                   0,
+                                                                   -1);
+                        m_vec_Peakline[m_index_PeakLine]->SetExcludePos(0, -1);
+                        //m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
+                    }
+
+                    QString seqinfo = m_vec_filetable[m_index_PeakLine].getUsefulSequence();
+                    QString fullseqinfo = m_vec_filetable[m_index_PeakLine].getBaseSequence();
+                    QString seq_editinfo;
+                    if (news_start<start){
+                        for (int i = news_start-1; i<left_exclude;i++){
+                        seq_editinfo += fullseqinfo[i];
+                        }
+                    }else{
+                        for (int i = start-1; i<left_exclude;i++){
+                        seq_editinfo += fullseqinfo[i];
+                        }
+                    }
+
+                    for(int i = left_exclude; i < m_index_Select; i++)
+                    {
+                        seq_editinfo += vec_GeneLetter[i].type;
+                    }
+
+                    for(int i = m_index_Select+1; i < end; i++)
+                    {
+                        seq_editinfo += vec_GeneLetter[i].type;
+                    }
+
+                    SoapTypingDB::GetInstance()->upDateUsefulSeq(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                  seq_editinfo,
+                                                                  m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                    m_vec_filetable[m_index_PeakLine].setUsefulSequence(seq_editinfo);
+                }
+                else {
+                    for (int i = m_index_Select; i<right_exclude; i++){
+                        vec_GeneLetter[i].oldtype = vec_GeneLetter[i].type;
+                    }
+                    vec_GeneLetter[m_index_Select+1].type = Core::GetInstance()->mergeBases(vec_GeneLetter[m_index_Select].type,vec_GeneLetter[m_index_Select+1].type);
+                    vec_GeneLetter[m_index_Select].type ='-';
+
+                    QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+                    QStringList align_editinfo;
+
+
+                    for(int i = 0; i < m_index_Select; i++){
+                        align_editinfo.push_back(aligninfo[i].toString());
+                    }
+                    align_editinfo.push_back("-1");
+
+                    int j=aligninfo[m_index_Select].toInt();
+                    for (int i = m_index_Select+1; i<aligninfo.length() && j<m_end_exon; i++, j++){
+                        align_editinfo.push_back(QString::number(j));
+                    }
+
+
+                    int new_end = align_editinfo.length();
+
+
+                    for(int i=new_end;i<aligninfo.length();i++)
+                    {
+                        align_editinfo.push_back(aligninfo[i].toString());
+                    }
+
+
+                    SoapTypingDB::GetInstance()->upDateAlignInfo(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                  align_editinfo.join(':'),
+                                                                  m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                    m_vec_filetable[m_index_PeakLine].setAlignInfo(align_editinfo.join(':'));
+                    if (new_end<end){
+                        SoapTypingDB::GetInstance()->upDataAlignPos( m_vec_Peakline[m_index_PeakLine]->GetGssp(),
+                                                                    m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                    start,
+                                                                    new_end);
+
+                        m_vec_filetable[m_index_PeakLine].setAlignEndPos(new_end);
+                        m_vec_Peakline[m_index_PeakLine]->SetAlignPos(start,new_end);
+                        m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
+                        SoapTypingDB::GetInstance()->upDataExclude(m_vec_Peakline[m_index_PeakLine]->GetGssp(),
+                                                                   m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                   -1,
+                                                                   0);
+                        m_vec_Peakline[m_index_PeakLine]->SetExcludePos(-1, 0);
+                        //m_vec_Peakline[m_index_PeakLine]->GetExcludePos(left_exclude, right_exclude);
+                    }
+
+                    QString seqinfo = m_vec_filetable[m_index_PeakLine].getUsefulSequence();
+                    QString fullseqinfo = m_vec_filetable[m_index_PeakLine].getBaseSequence();
+                    QString seq_editinfo;
+
+                    for (int i = align_editinfo[start].toInt(); i>m_start_exon;i--){
+                        seq_editinfo += "-";
+                    }
+                    for (int i = start; i<m_index_Select;i++){
+                        seq_editinfo += fullseqinfo[i];
+                    }
+                    if (new_end>end){
+                        for (int i = m_index_Select+1; i<new_end;i++){
+                        seq_editinfo += fullseqinfo[i];
+                        }
+                    }else{
+                        for (int i = m_index_Select+1; i<end+1;i++){
+                        seq_editinfo += fullseqinfo[i];
+                        }
+                    }
+
+                    SoapTypingDB::GetInstance()->upDateUsefulSeq(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                  seq_editinfo,
+                                                                  m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                    m_vec_filetable[m_index_PeakLine].setUsefulSequence(seq_editinfo);
+                }
+            }
+
+
+            QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+            update();
+            //emit signalChangeDB(m_str_SampleName);//数据库发生变化，需要重新分析样品，重新显示信息
+           // QPoint pos_peak = mapToParent(m_select_pos);
+           // emit signalPeakFocusPosition(m_index_Exon, m_x_index, pos_peak);
+
+            if(m_bEditOne)
+                {
+                    QVector<QStringRef> aligninfo = m_vec_filetable[m_index_PeakLine].getAlignInfo().splitRef(':');
+                    QStringList list_editinfo;//每个string包含三个部分：碱基序列实际位置 映射到比对位置的pos 修改后的碱基
+                    for(int i=left_exclude;i<right_exclude;i++)
+                    {
+                        if(vec_GeneLetter[i].oldtype != ' ')
+                        {
+                            int selectpos = aligninfo[i].toInt();
+                            list_editinfo.push_back(QString("%1:%2:%3").arg(i).arg(selectpos).arg(vec_GeneLetter[i].type));
+                        }
+                    }
+
+                    if(!list_editinfo.empty())
+                    {
+                        SoapTypingDB::GetInstance()->upDatabyChangebp(m_vec_Peakline[m_index_PeakLine]->GetFileName(),
+                                                                  list_editinfo.join(';'),
+                                                                  m_vec_Peakline[m_index_PeakLine]->GetGssp());
+                        emit signalChangeDB(m_str_SampleName);//数据库发生变化，需要重新分析样品，重新显示信息
+                        QPoint pos_peak = mapToParent(m_select_pos);
+                        emit signalPeakFocusPosition(m_index_Exon, m_x_index, pos_peak);
+                    }
+                }
+
+        }
+
+    }
+
+
+
+
+}
+
+
+void MultiPeakWidget::slotActMeargeBase()
+{
+    slotMeargeBase();
+   // emit signalChangeDBByFile(vec_samplename);
+}
+
+
 
 void MultiPeakWidget::slotApplyOne()
 {
@@ -999,6 +1550,7 @@ void MultiPeakWidget::slotAnalyseLater()
     m_pActanalyzeLater->setDisabled(true);
     m_pActanalyzeNow->setDisabled(false);
     m_pActanalyze->setDisabled(false);
+
 }
 
 void MultiPeakWidget::slotActanalyzeLater()

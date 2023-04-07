@@ -128,7 +128,8 @@ void Core::GetFileAlignResult(FileAlignNew &file_align_new, FileAlignResult &res
             else
             {
                 pos++;
-                result.rightLimit--;
+                cmp_len++;
+                //result.rightLimit--; //SC: keep rightLimit, avoid shrink aligment 
             }
         }
         result.sampleAlign[ref_len] ='\0';
@@ -274,8 +275,13 @@ void Core::Align_LCS_new(const char *ref, const char *seq, FileAlignResultNew *r
 {
     int m = strlen(ref);
     int n = strlen(seq);
+    //SC: limit sanger seq length 
+    if (n>1100){
+        n = 1100;
+    }
     int maxscore = 0, x = 0, y = 0;
-    std::vector<std::vector<int>> vec_matrix(m, std::vector<int>(n, 0));
+    std::vector<std::vector<int>> vec_matrix(m, std::vector<int>(n+1, 0));
+    //SC: set empty matrix to mx(n+1), to keep the most right column be '0''. 空矩阵设为mx(n+1)，保证最右一个列全是0
     std::vector<char> ref_back;
     std::vector<char> seq_back;
 
@@ -311,9 +317,21 @@ void Core::Align_LCS_new(const char *ref, const char *seq, FileAlignResultNew *r
     seq_back.clear();
     while (maxscore>0)
     {
-        ref_back.push_back(ref[x--]);
-        seq_back.push_back(seq[y--]);
-        maxscore--;
+        //SC: ignore alignment smaller than 10. 小于10的片段不考虑
+        if (vec_matrix[x][y]<(vec_matrix[x][y+1]-10)){
+            ref_back.push_back(ref[x--]);
+            seq_back.push_back('-');
+           // qDebug()<<maxscore<<" <  "<<vec_matrix[x+1][y+1];
+            maxscore = vec_matrix[x+1][y+1]-1;
+
+        }else{
+            ref_back.push_back(ref[x--]);
+            seq_back.push_back(seq[y--]);
+            maxscore--;
+        }
+//        ref_back.push_back(ref[x--]);
+//        seq_back.push_back(seq[y--]);
+//        maxscore--;
     }
 
 //    while (x >= 0 && y >= 0)

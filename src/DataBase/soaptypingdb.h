@@ -99,8 +99,11 @@ public:
                                          QStringList &alleleSeqs, QVector< QVector<int> > &misPositions);
     void getAlleleSequenceByAlleleName(const QString &alleleName, QString &alleleSeq);
 
+    bool upDateAlignInfo(const QString &filename, const QString &straligninfo,bool isgssp);
+    bool upDateUsefulSeq(const QString &filename, const QString &usefulseq,bool isgssp);
     bool upDatabyChangebp(const QString &filename, const QString &streditinfo,bool isgssp);
     bool upDataExclude(bool isgssp, const QString &filename, int exclude_left, int exclude_right);
+    bool upDataAlignPos(bool isgssp, const QString &filename, int start, int end);
     bool deleteTable(const QString &tableName);
     void readGeneTableTxtFile(const QString &geneFile);
     void insertGeneTable(const GeneTable &geneTable);

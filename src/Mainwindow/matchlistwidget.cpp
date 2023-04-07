@@ -7,6 +7,7 @@
 #include "Dialog/gsspinfodlg.h"
 #include "Dialog/finaltypedlg.h"
 #include <QContextMenuEvent>
+#include <QDebug>
 #include "log/log.h"
 #include "Core/core.h"
 
@@ -220,9 +221,11 @@ void MatchListWidget::CreateRightMenu()
 
     m_pActShowGSSPZCode = new QAction(tr("Show GSSP Z Code"), this);
     m_pActSetFinalType = new QAction(tr("Set Final Type"), this);
+ //   m_pActMergeType = new QAction(tr("Merge Type"), this);
 
     m_pRightMenu->addAction(m_pActShowGSSPZCode);
     m_pRightMenu->addAction(m_pActSetFinalType);
+  //  m_pRightMenu->addAction(m_pActMergeType);
 }
 
 void MatchListWidget::contextMenuEvent(QContextMenuEvent *event)
@@ -238,14 +241,16 @@ void MatchListWidget::contextMenuEvent(QContextMenuEvent *event)
 void MatchListWidget::ConnectSignalandSlot()
 {
     connect(this, &QTableWidget::itemDoubleClicked, this, &MatchListWidget::slotClickIndelItem);
-    connect(this, &QTableWidget::itemClicked, this, &MatchListWidget::slotRowChanged);
-
+    //connect(this, &QTableWidget::itemClicked, this, &MatchListWidget::slotRowChanged);
+    connect(this, &QTableWidget::currentItemChanged, this, &MatchListWidget::slotRowChanged);
     connect(m_pActShowGSSPZCode, &QAction::triggered, this, &MatchListWidget::slotShowGsspZCode);
     connect(m_pActSetFinalType, &QAction::triggered, this, &MatchListWidget::slotSetFinalType);
+   // connect(m_pActMergeType, &QAction::triggered, this, &MatchListWidget::slotMergeType);
 }
 
 void MatchListWidget::slotClickIndelItem(QTableWidgetItem* itemNow)
 {
+
     if(itemNow->column()==0 && itemNow->text().contains('*'))
     {
         QString allele1 = item(itemNow->row(), 1)->text();
@@ -303,6 +308,9 @@ void MatchListWidget::slotClickIndelItem(QTableWidgetItem* itemNow)
 
 void MatchListWidget::slotRowChanged(QTableWidgetItem* itemNow)
 {
+    if(itemNow==0) {
+        return;
+    }
     int row = itemNow->row();
 
     if(row == m_iOldRow || row > m_iRowCount || itemNow->text().isEmpty())
@@ -350,6 +358,10 @@ void MatchListWidget::slotSetFinalType()
     finalTypeDlg.exec();
 }
 
+void MatchListWidget::slotMergeType()
+{
+
+}
 
 void findUsefulGssp_new(const char *seq11, const char *seq12, const char *seq21, const char *seq22,
                     int exonStart, int exonEnd, QVector<GsspTable> &gsspTables,

@@ -175,7 +175,7 @@ void BaseAlignTableWidget::SetAlignTableData(QString &str_samplename,  QString &
     m_str_file = str_file;
     m_str_info = str_info;
     m_i_col = col;
-
+   
     if(!m_bRefresh)//如果不要求刷新，需要判断是否切换了样品
     {
         if(m_str_SampleName != str_samplename)
@@ -189,11 +189,14 @@ void BaseAlignTableWidget::SetAlignTableData(QString &str_samplename,  QString &
     }
     else
     {
+        if(m_str_SampleName != str_samplename)
+        {
+            m_str_SampleName = str_samplename;
+        }
         m_bRefresh = false;
     }
 
     ClearBaseAlignTable();
-
     SoapTypingDB::GetInstance()->getBaseAlignSampleInfo(str_samplename, m_BaseAlignSampleInfo);
     int i_startColumn = 1;
     if(m_BaseAlignSampleInfo.alignStartPos == m_BaseAlignSampleInfo.alignEndPos)

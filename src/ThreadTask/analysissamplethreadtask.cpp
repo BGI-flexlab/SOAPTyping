@@ -145,10 +145,22 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
     }
 
     QSet<int> tmpset;//缓存留下的allele
-    //取最好的前200个不带有*的序列,最多不超过400
+    //取最好的前200个不带有*的序列,最多不超过500，废掉了
+    //取前20%最好的，最多不超多50%
+    //cut_best and cut_limit
+    int cut_best = normalCount*0.2;
+    if (cut_best<200){
+        cut_best = 200;
+    }
+
+    int cut_limit = normalCount*0.5;
+    if (cut_limit<500){
+        cut_limit = 500;
+    }
     for(QMap<int, int>::iterator it=tmpNomalPos.begin(); it!=tmpNomalPos.end(); it++){
         tmpCount++;
-        if(tmpCount>400 || tmpCount>200 && it.key()>tmpMis){
+       // qDebug()<<"normal it.key = "<<it.key()<<" it.value = "<<alleleInfos.at(it.value()).alleleName<<" Count = "<<tmpMis;
+        if(tmpCount>cut_limit || tmpCount>cut_best && it.key()>tmpMis){
                 break;
         }else{
             tmpMis = it.key();
@@ -156,14 +168,25 @@ void removeAlleleInfoByPatternNew(char *patternSeq, QVector<AlleleInfo> &alleleI
         tmpset.insert(it.value());
     }
     tmpCount =0;tmpMis =0;
-    //取最好的前200个带有*的序列,最多不超过400
+    //取最好的前200个带有*的序列,最多不超过500,废掉了
+    //取前20%最好的，最多不超多50%
+    cut_best = starCount*0.2;
+    if (cut_best<200){
+        cut_best = 200;
+    }
+    cut_limit = starCount*0.5;
+    if (cut_limit<500){
+        cut_limit = 500;
+    }
     for(QMap<int, int>::iterator it=tmpStarPos.begin(); it!=tmpStarPos.end(); it++){
         tmpCount++;
-        if(tmpCount>400 || tmpCount>200 && it.key()>tmpMis){
+        if(tmpCount>cut_limit || tmpCount>cut_best && it.key()>tmpMis){
                 break;
         }else{
             tmpMis = it.key();
         }
+      //  qDebug()<<"star it.key = "<<it.key()<<" it.value = "<<alleleInfos.at(it.value()).alleleName<<" Count = "<<tmpMis;
+
         tmpset.insert(it.value());
     }
 
@@ -442,11 +465,20 @@ int comparePatternWithAllele_OneThread(char *patternSeq, QVector<AlleleInfo> &al
     }
 #endif
 
+
+
+    //筛选allele,先做i,再做j.
+    //特定的allele在这里设置 (A*02:01)
+    QString allele_spec = "A*02:01";
+
     QSet<QString> set_str;
     for(int i=0; i<size; i++)
     {
+       // qDebug()<<i<<" and "<<alleleInfos.at(i).alleleName;
+        //空掉不是特定的allele
         if(alleleInfos.at(i).alleleName.count(':')<3) //筛选i相似的型别
         {
+
             if(!set_str.contains(alleleInfos.at(i).alleleName))
             {
                 set_str.insert(alleleInfos.at(i).alleleName);
@@ -459,6 +491,7 @@ int comparePatternWithAllele_OneThread(char *patternSeq, QVector<AlleleInfo> &al
         else
         {
             QString tmp_str = alleleInfos.at(i).alleleName.section(':',0,2);
+           // qDebug()<<alleleInfos.at(i).alleleName<<" and "<<tmp_str;
             if(!set_str.contains(tmp_str))
             {
                 set_str.insert(tmp_str);
@@ -497,6 +530,14 @@ int comparePatternWithAllele_OneThread(char *patternSeq, QVector<AlleleInfo> &al
                 }
             }
 
+
+            //如果i和j都没有"allele_spec"则跳过此项
+         /*   if(alleleInfos.at(i).alleleName.section(':',0,1) != allele_spec && alleleInfos.at(j).alleleName.section(':',0,1) != allele_spec)
+            {
+                continue;
+            }
+
+*/
 
             int mis = compareByAlleleInfoAndDiffPos_new(patternSeq, alleleInfos.at(i),
                                                         alleleInfos.at(j), differentPosInfos.at(i),
@@ -739,15 +780,15 @@ int AnalysisSampleThreadTask::comparePatternWithAllele(char *patternSeq,  char *
     //从alleleTable获取信息，数据比较多
     SoapTypingDB::GetInstance()->getAlleleInfosFromStaticDatabase(geneName, exonStartPos, length, minExonIndex, maxExonIndex, alleleInfos, sheildAlleles);
 
-
-    if(alleleInfos.size()>100)
-    {
+    //qDebug()<<"alleleSize = "<<alleleInfos.size();
+    if(alleleInfos.size()>3000){
         /**
           *需要排除兼并序列>一致性序列的点
           */
         //removeAlleleInfoByPattern(patternSeq, alleleInfos, consensusSeq);
         removeAlleleInfoByPatternNew(patternSeq, alleleInfos);
     }
+   // qDebug()<<"alleleSize = "<<alleleInfos.size();
     if(alleleInfos.size()<=0)
     {
         return MISMATCH;
